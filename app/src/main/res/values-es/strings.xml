@@ -54,7 +54,7 @@
     <string name="analysis_in_progress">Análisis en curso…</string>
     <string name="impact_on_objective_function">Impacto en la Función Objetivo:</string>
     <string name="final_objective_function">Función Objetivo Final: %1$.3f</string>
-    <string name="definition_objective_function">Definición: (UtilidadMedia + (w/100) * (UtilidadMedia/DesvEst)) / (1 + w/100), w=%1$.2f</string>
+    <string name="definition_objective_function">Puntuación escalar actual del plan mostrado: (UtilidadMedia + (w/100) * (UtilidadMedia/DesvEst)) / (1 + w/100), w=%1$.2f</string>
     <string name="definition_std_dev">Definición: Desviación Estándar de los valores de utilidad anuales.</string>
     <string name="definition_stability_index">Fórmula: Índice Estabilidad = DesvEst / (w/100).\n>> 1: w bajo, prioridad Utilidad Media.\n&lt;&lt; 1: w alto, prioridad Estabilidad.\n~ 1: Equilibrado.</string>
     <string name="average_utility">Utilidad Media: %1$.3f</string>
@@ -112,6 +112,24 @@
     <string name="table_parameter">PARÁMETRO</string>
     <string name="table_impact">IMPACTO</string>
     <string name="optimization_parameters_group">Parámetros de Optimización</string>
+    <string name="optimization_mode_title">Modo de optimización</string>
+    <string name="optimization_mode_best_compromise">Mejor compromiso</string>
+    <string name="optimization_mode_pareto_front">Frente de Pareto</string>
+    <string name="optimization_mode_best_compromise_desc">Aplica automáticamente un plan Pareto-óptimo equilibrado.</string>
+    <string name="optimization_mode_pareto_front_desc">Calcula el conjunto factible no dominado completo sin sobrescribir los parámetros actuales.</string>
+    <string name="optimization_mode_best_compromise_definition">Regla de selección: elegir el plan Pareto-óptimo más cercano al punto ideal normalizado mediante ASF aumentada.</string>
+    <string name="optimization_mode_pareto_front_definition">Regla de Pareto: conservar todos los planes factibles no dominados que maximizan Utilidad Media y minimizan Desv. Est.</string>
+    <string name="optimization_mode_compromise_summary">Mejor compromiso seleccionado entre %1$d puntos de Pareto.\nPuntuación de compromiso: %2$.4f\nParámetros aplicados: P1=%3$.4f P2=%4$d P3=%5$.4f P4=%6$d</string>
+    <string name="optimization_mode_pareto_summary">Frente de Pareto calculado con %1$d planes factibles no dominados.</string>
+    <string name="pareto_reference_compromise">Compromiso de referencia del frente: puntuación %1$.4f | P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
+    <string name="pareto_front_ideal_summary">Ideales del frente: Utilidad Media %1$.4f | Desv. Est. %2$.4f</string>
+    <string name="pareto_front_points_label">Puntos del frente de Pareto</string>
+    <string name="pareto_compromise_score_label">Puntuación del compromiso de referencia</string>
+    <string name="result_feasibility">Factibilidad</string>
+    <string name="result_feasible">Factible</string>
+    <string name="result_infeasible">No factible</string>
+    <string name="result_final_capital">Capital final</string>
+    <string name="result_legacy_gap">Margen de legado</string>
     
     <!-- Sensitivity Analysis Strings -->
     <string name="sens_p1">P1 Tasa de Ahorro</string>
@@ -177,7 +195,9 @@
     <string name="charts_optimizing_params">Optimizando parámetros…</string>
     <string name="charts_optimal_f_results">F(w) Óptimo = %1$.3f | F(0) = %2$.3f</string>
     <string name="charts_stability_index_value">Índice Estabilidad [std / (w/100)]: %1$.2f</string>
-    <string name="charts_fobj_formula">fobj = (UtilidadMedia + (w/100) * (UtilidadMedia / DesvEst)) / (1 + w/100)</string>
+    <string name="charts_fobj_formula">Fórmula escalar de exploración: fobj = (UtilidadMedia + (w/100) * (UtilidadMedia / DesvEst)) / (1 + w/100)</string>
+    <string name="charts_best_compromise_summary">Modo mejor compromiso: seleccionado entre %1$d puntos de Pareto | puntuación %2$.4f | UtilidadMedia %3$.4f | DesvEst %4$.4f</string>
+    <string name="charts_pareto_front_summary">Modo frente de Pareto: %1$d planes factibles no dominados | ideal UtilidadMedia %2$.4f | ideal DesvEst %3$.4f</string>
     <string name="charts_switch_3d">Cambiar a 3D</string>
     <string name="charts_switch_2d">Cambiar a 2D</string>
     <string name="charts_axis_p1">P1: fracción del superávit ahorrado [0–1]</string>

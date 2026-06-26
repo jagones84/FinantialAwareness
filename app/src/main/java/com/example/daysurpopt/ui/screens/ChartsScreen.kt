@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.daysurpopt.R
 import com.example.daysurpopt.domain.FinancialInput
+import com.example.daysurpopt.domain.OptimizationMode
+import com.example.daysurpopt.domain.ParetoFrontResult
 import com.example.daysurpopt.ui.theme.ChartP1Hex
 import com.example.daysurpopt.ui.theme.ChartP2Hex
 import com.example.daysurpopt.ui.theme.MutedText
@@ -53,6 +55,8 @@ fun ChartsScreen(
     val gaUiSnapshot = viewModel.gaUI
     val expensesSnapshot = viewModel.specificExpenses
     val isOptimizing = viewModel.optimizing
+    val optimizationMode = viewModel.optimizationMode
+    val paretoFrontResult = viewModel.paretoFrontResult
     
     // Compare Mode Data
     val isComparing = viewModel.compareState.isComparing
@@ -145,6 +149,8 @@ fun ChartsScreen(
         p3p4State = chartsViewModel.p3p4State,
         inputsSnapshot = inputsSnapshot,
         isComparing = isComparing,
+        optimizationMode = optimizationMode,
+        paretoFrontResult = paretoFrontResult,
         profile1Name = profile1Name,
         profile2Name = profile2Name,
         isOptimizing = isOptimizing,
@@ -203,6 +209,8 @@ fun ChartsContent(
     p3p4State: ChartUiState,
     inputsSnapshot: FinancialInput,
     isComparing: Boolean,
+    optimizationMode: OptimizationMode,
+    paretoFrontResult: ParetoFrontResult?,
     profile1Name: String?,
     profile2Name: String?,
     isOptimizing: Boolean,
@@ -307,6 +315,32 @@ fun ChartsContent(
                          }
                     } else if (optimalObjW > 0.0) {
                          Column {
+                             paretoFrontResult?.let { front ->
+                                 if (optimizationMode == OptimizationMode.BEST_COMPROMISE && front.selectedCompromise != null) {
+                                     Text(
+                                         text = stringResource(
+                                             R.string.charts_best_compromise_summary,
+                                             front.points.size,
+                                             front.selectedCompromise!!.compromiseScore ?: 0.0,
+                                             front.selectedCompromise!!.avgUtility,
+                                             front.selectedCompromise!!.stdDevUtility
+                                         ),
+                                         style = MaterialTheme.typography.labelMedium,
+                                         color = MaterialTheme.colorScheme.primary
+                                     )
+                                 } else if (optimizationMode == OptimizationMode.PARETO_FRONT && front.points.isNotEmpty()) {
+                                     Text(
+                                         text = stringResource(
+                                             R.string.charts_pareto_front_summary,
+                                             front.points.size,
+                                             front.idealAvgUtility,
+                                             front.idealStdDevUtility
+                                         ),
+                                         style = MaterialTheme.typography.labelMedium,
+                                         color = MaterialTheme.colorScheme.primary
+                                     )
+                                 }
+                             }
                              Text(
                                  text = stringResource(R.string.charts_optimal_f_results, optimalObjW, optimalObj0),
                                  style = MaterialTheme.typography.labelMedium,
@@ -552,6 +586,8 @@ fun ChartsContentPreview() {
         p3p4State = ChartUiState(isLoading = false),
         inputsSnapshot = FinancialInput(),
         isComparing = false,
+        optimizationMode = OptimizationMode.BEST_COMPROMISE,
+        paretoFrontResult = null,
         profile1Name = "Profile 1",
         profile2Name = null,
         isOptimizing = false,

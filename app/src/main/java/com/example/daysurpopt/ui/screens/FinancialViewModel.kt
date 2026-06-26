@@ -26,13 +26,18 @@ import androidx.core.content.FileProvider
 import android.content.Intent
 
 data class OptimizationResult(
+    val mode: OptimizationMode,
     val gaFitness: Double,
     val bonusWeight: Double,
     val finalFitness: Double,
     val p1: Double,
     val p2: Int,
     val p3: Double,
-    val p4: Int
+    val p4: Int,
+    val paretoPointCount: Int = 0,
+    val compromiseScore: Double? = null,
+    val selectedAvgUtility: Double? = null,
+    val selectedStdDev: Double? = null
 )
 
 class FinancialViewModel(application: Application) : AndroidViewModel(application) {
@@ -54,7 +59,11 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                 }
                 objectiveFunctionValue = objective
                 simulationResults = results
-                objectiveResults = calculateObjectivesFromYears(results, inputs.bonusStdWeight)
+                objectiveResults = calculateObjectivesFromYears(
+                    years = results,
+                    bonusStdWeight = inputs.bonusStdWeight,
+                    legacyTarget = inputs.soldiDaConservare
+                )
                 
                 // Update comparison if needed
                 if (compareState.isComparing && compareState.profile2 != null) {
@@ -98,6 +107,8 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                     sensitivityResults,
                     aiComment,
                     agentSettings.model,
+                    optimizationMode = optimizationMode,
+                    paretoFrontResult = paretoFrontResult,
                     compareState = if (compareState.isComparing) compareState else null,
                     profile2Results = if (compareState.isComparing) Triple(
                         profile2ObjectiveResults,
@@ -225,11 +236,41 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                         max = ParamsCandidate(1.0, baseInputs.etaPensione, 1.0, baseInputs.etaMorte),
                         maximize = true
                     )
-                    
-                    // Run Optimization (Base)
-                    val gaRes = OptimizationLogic.optimizeParameters(baseInputs, gaConfig, specificExpenses, surplusData)
-                    val localRes = OptimizationLogic.coordinateSearch(baseInputs, gaRes.bestParams, gaConfig, specificExpenses = specificExpenses, surplusData = surplusData)
-                    val finalRes = if (localRes.bestFitness >= gaRes.bestFitness) localRes else gaRes
+                    val paretoResult = ParetoOptimizationLogic.optimizeParetoParameters(
+                        baseInputs = baseInputs,
+                        config = gaConfig,
+                        specificExpenses = specificExpenses,
+                        surplusData = surplusData
+                    )
+                    val selectedCompromise = paretoResult.points.takeIf { it.isNotEmpty() }?.let {
+                        CompromiseSelectionLogic.selectBestCompromise(it)
+                    }
+                    val optimizationNarrative = when {
+                        paretoResult.points.isEmpty() -> """
+                            - Optimization mode: ${optimizationMode.name}
+                            - Pareto result: no feasible non-dominated plans found within current bounds.
+                        """.trimIndent()
+
+                        optimizationMode == OptimizationMode.PARETO_FRONT -> """
+                            - Optimization mode: Pareto Front
+                            - Pareto points found: ${paretoResult.points.size}
+                            - Ideal Avg Utility: ${String.format(Locale.US, "%.4f", paretoResult.idealAvgUtility)}
+                            - Ideal Std Dev: ${String.format(Locale.US, "%.4f", paretoResult.idealStdDevUtility)}
+                            - Reference compromise: score=${String.format(Locale.US, "%.4f", selectedCompromise?.compromiseScore ?: 0.0)}, P1=${String.format(Locale.US, "%.2f", selectedCompromise?.params?.p1 ?: baseInputs.p1SavingRatioSurplus)}, P2=${selectedCompromise?.params?.p2 ?: baseInputs.p2EtaFineRisparmioNoCapitale}, P3=${String.format(Locale.US, "%.2f", selectedCompromise?.params?.p3 ?: baseInputs.p3PercentualeCapitaleDaSpendereAnnualmente)}, P4=${selectedCompromise?.params?.p4 ?: baseInputs.p4EtaAnticipataInizioSpesaCapitale}
+                        """.trimIndent()
+
+                        else -> """
+                            - Optimization mode: Best Compromise
+                            - Pareto points found: ${paretoResult.points.size}
+                            - Current scalar score: ${String.format(Locale.US, "%.4f", objectiveFunctionValue ?: 0.0)}
+                            - Compromise score: ${String.format(Locale.US, "%.4f", selectedCompromise?.compromiseScore ?: 0.0)}
+                            - Optimized params:
+                              P1=${String.format(Locale.US, "%.2f", selectedCompromise?.params?.p1 ?: baseInputs.p1SavingRatioSurplus)}
+                              P2=${selectedCompromise?.params?.p2 ?: baseInputs.p2EtaFineRisparmioNoCapitale}
+                              P3=${String.format(Locale.US, "%.2f", selectedCompromise?.params?.p3 ?: baseInputs.p3PercentualeCapitaleDaSpendereAnnualmente)}
+                              P4=${selectedCompromise?.params?.p4 ?: baseInputs.p4EtaAnticipataInizioSpesaCapitale}
+                        """.trimIndent()
+                    }
                     
                     // Run Stress Test (Base: -1% Interest)
                     val stressTestInputs = baseInputs.copy(tassoGuadagnoInteresse = baseInputs.tassoGuadagnoInteresse - 0.01)
@@ -259,13 +300,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                     **Analyst Report**:
                     
                     **A. Optimization Analysis (Base Profile)**:
-                    - Current Objective: ${String.format(Locale.US, "%.4f", objectiveFunctionValue ?: 0.0)}
-                    - Potential Objective: ${String.format(Locale.US, "%.4f", finalRes.bestFitness)}
-                    - Optimized Params: 
-                      P1=${"%.2f".format(finalRes.bestParams.p1)}
-                      P2=${finalRes.bestParams.p2}
-                      P3=${"%.2f".format(finalRes.bestParams.p3)}
-                      P4=${finalRes.bestParams.p4}
+                    $optimizationNarrative
                     
                     **B. Stress Test (Base: Interest Rate -1%)**:
                     $stressTestResult
@@ -307,6 +342,11 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     var specificExpenses by mutableStateOf(SpecificExpensesRepository.loadExpenses(context))
         private set
     var surplusData by mutableStateOf(SurplusDataRepository.loadInputs(context))
+        private set
+
+    var optimizationMode by mutableStateOf(OptimizationMode.BEST_COMPROMISE)
+        private set
+    var paretoFrontResult by mutableStateOf<ParetoFrontResult?>(null)
         private set
 
     var objectiveFunctionValue by mutableStateOf<Double?>(null)
@@ -397,6 +437,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     fun updateInputs(newInputs: FinancialInput) {
         inputs = newInputs
         uiInputs = FinancialInputUI.from(newInputs)
+        clearOptimizationArtifacts()
         saveInputs()
     }
 
@@ -406,68 +447,98 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     
     fun updateParsedInput(updater: (FinancialInput) -> FinancialInput) {
         inputs = updater(inputs)
+        clearOptimizationArtifacts()
         saveInputs()
+    }
+
+    fun updateOptimizationMode(mode: OptimizationMode) {
+        optimizationMode = mode
+        clearOptimizationArtifacts()
     }
 
     fun runOptimization() {
         viewModelScope.launch {
             optimizing = true
             optimizationResult = null
-            
+
             val cfg = OptimizationLogic.parseGaConfig(gaUI, inputs)
-            val gaRes = withContext(Dispatchers.Default) { 
-                OptimizationLogic.optimizeParameters(inputs, cfg, specificExpenses, surplusData) 
-            }
-            
-            val localRes = withContext(Dispatchers.Default) {
-                OptimizationLogic.coordinateSearch(
-                    inputs,
-                    gaRes.bestParams,
-                    cfg,
+            val front = withContext(Dispatchers.Default) {
+                ParetoOptimizationLogic.optimizeParetoParameters(
+                    baseInputs = inputs,
+                    config = cfg,
                     specificExpenses = specificExpenses,
                     surplusData = surplusData
                 )
             }
-            
-            val finalRes = if (cfg.maximize) {
-                if (localRes.bestFitness >= gaRes.bestFitness) localRes else gaRes
-            } else {
-                if (localRes.bestFitness <= gaRes.bestFitness) localRes else gaRes
+            val selectedCompromise = withContext(Dispatchers.Default) {
+                front.points.takeIf { it.isNotEmpty() }?.let {
+                    CompromiseSelectionLogic.selectBestCompromise(it)
+                }
+            }
+            paretoFrontResult = front.copy(selectedCompromise = selectedCompromise)
+
+            if (front.points.isEmpty()) {
+                optimizationResult = OptimizationResult(
+                    mode = optimizationMode,
+                    gaFitness = 0.0,
+                    bonusWeight = inputs.bonusStdWeight,
+                    finalFitness = 0.0,
+                    p1 = inputs.p1SavingRatioSurplus,
+                    p2 = inputs.p2EtaFineRisparmioNoCapitale,
+                    p3 = inputs.p3PercentualeCapitaleDaSpendereAnnualmente,
+                    p4 = inputs.p4EtaAnticipataInizioSpesaCapitale,
+                    paretoPointCount = 0
+                )
+                optimizing = false
+                return@launch
             }
 
-            val p2 = finalRes.bestParams.p2
-            val p4 = maxOf(finalRes.bestParams.p4, p2)
-            
-            updateParsedInput { i -> i.copy(
-                p1SavingRatioSurplus = finalRes.bestParams.p1,
-                p2EtaFineRisparmioNoCapitale = p2,
-                p3PercentualeCapitaleDaSpendereAnnualmente = finalRes.bestParams.p3,
-                p4EtaAnticipataInizioSpesaCapitale = p4
-            )}
-            
-            updateUiInputs(uiInputs.copy(
-                p1SavingRatioSurplus = String.format(Locale.US, "%.4f", finalRes.bestParams.p1),
-                p2EtaFineRisparmioNoCapitale = p2.toString(),
-                p3PercentualeCapitaleDaSpendereAnnualmente = String.format(
-                    Locale.US,
-                    "%.4f",
-                    finalRes.bestParams.p3
-                ),
-                p4EtaAnticipataInizioSpesaCapitale = p4.toString()
-            ))
-            
+            if (optimizationMode == OptimizationMode.BEST_COMPROMISE && selectedCompromise != null) {
+                val p2 = selectedCompromise.params.p2
+                val p4 = maxOf(selectedCompromise.params.p4, p2)
+                inputs = inputs.copy(
+                    p1SavingRatioSurplus = selectedCompromise.params.p1,
+                    p2EtaFineRisparmioNoCapitale = p2,
+                    p3PercentualeCapitaleDaSpendereAnnualmente = selectedCompromise.params.p3,
+                    p4EtaAnticipataInizioSpesaCapitale = p4
+                )
+                saveInputs()
+
+                updateUiInputs(
+                    uiInputs.copy(
+                        p1SavingRatioSurplus = String.format(Locale.US, "%.4f", selectedCompromise.params.p1),
+                        p2EtaFineRisparmioNoCapitale = p2.toString(),
+                        p3PercentualeCapitaleDaSpendereAnnualmente = String.format(
+                            Locale.US,
+                            "%.4f",
+                            selectedCompromise.params.p3
+                        ),
+                        p4EtaAnticipataInizioSpesaCapitale = p4.toString()
+                    )
+                )
+            }
+
             runSimulation()
-            
+
+            val summaryPoint = selectedCompromise ?: front.points.first()
             optimizationResult = OptimizationResult(
-                gaFitness = gaRes.bestFitness,
+                mode = optimizationMode,
+                gaFitness = front.points.size.toDouble(),
                 bonusWeight = inputs.bonusStdWeight,
-                finalFitness = finalRes.bestFitness,
-                p1 = finalRes.bestParams.p1,
-                p2 = p2,
-                p3 = finalRes.bestParams.p3,
-                p4 = p4
+                finalFitness = when (optimizationMode) {
+                    OptimizationMode.BEST_COMPROMISE -> summaryPoint.compromiseScore ?: 0.0
+                    OptimizationMode.PARETO_FRONT -> summaryPoint.avgUtility
+                },
+                p1 = summaryPoint.params.p1,
+                p2 = summaryPoint.params.p2,
+                p3 = summaryPoint.params.p3,
+                p4 = summaryPoint.params.p4,
+                paretoPointCount = front.points.size,
+                compromiseScore = summaryPoint.compromiseScore,
+                selectedAvgUtility = summaryPoint.avgUtility,
+                selectedStdDev = summaryPoint.stdDevUtility
             )
-            
+
             optimizing = false
         }
     }
@@ -483,7 +554,11 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
             }
             objectiveFunctionValue = objective
             simulationResults = results
-            objectiveResults = calculateObjectivesFromYears(results, inputs.bonusStdWeight)
+            objectiveResults = calculateObjectivesFromYears(
+                years = results,
+                bonusStdWeight = inputs.bonusStdWeight,
+                legacyTarget = inputs.soldiDaConservare
+            )
             
             // If in compare mode, recompute deltas using updated Profile 1 results
             if (compareState.isComparing && profile2ObjectiveResults != null) {
@@ -525,6 +600,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun updateGaConfig(newConfig: GAConfigUI) {
         gaUI = newConfig
+        clearOptimizationArtifacts()
         GaConfigRepository.saveConfig(context, newConfig)
         triggerRecalculation()
     }
@@ -535,12 +611,14 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun updateSpecificExpenses(newExpenses: List<SpecificExpense>) {
         specificExpenses = newExpenses
+        clearOptimizationArtifacts()
         SpecificExpensesRepository.saveExpenses(context, specificExpenses)
         triggerRecalculation()
     }
 
     fun updateSurplusData(newData: SurplusInput) {
         surplusData = newData
+        clearOptimizationArtifacts()
         SurplusDataRepository.saveInputs(context, newData)
         triggerRecalculation()
     }
@@ -568,6 +646,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         refreshSurplusData()
         SpecificExpensesRepository.saveExpenses(context, List(10) { SpecificExpense() })
         specificExpenses = SpecificExpensesRepository.loadExpenses(context)
+        clearOptimizationArtifacts()
         saveInputs()
         GaConfigRepository.saveConfig(context, gaUI)
     }
@@ -584,6 +663,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         gaUI = restoredState.gaConfig
         specificExpenses = restoredState.specificExpenses
         surplusData = restoredState.surplusInput
+        clearOptimizationArtifacts()
         refreshSurplusData()
     }
 
@@ -667,6 +747,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         deltaObjectiveResults = null
         deltaSimulationResults = emptyList()
         deltaSensitivityResults = null
+        clearOptimizationArtifacts()
     }
 
     /**
@@ -678,14 +759,22 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
             val p1Inputs = p1.financialInput.withDefaultAssumptionCurves()
             val p1Surplus = p1.surplusInput
             val p1Simulation = calculateSimulation(p1Inputs, p1.specificExpenses, p1Surplus)
-            val p1Objectives = calculateObjectivesFromYears(p1Simulation, p1Inputs.bonusStdWeight)
+            val p1Objectives = calculateObjectivesFromYears(
+                years = p1Simulation,
+                bonusStdWeight = p1Inputs.bonusStdWeight,
+                legacyTarget = p1Inputs.soldiDaConservare
+            )
             val p1Sensitivity = OptimizationLogic.runSensitivityAnalysis(p1Inputs, p1.specificExpenses, p1Surplus)
 
             // Profile 2 results
             val p2Inputs = p2.financialInput.withDefaultAssumptionCurves()
             val p2Surplus = p2.surplusInput
             val p2Simulation = calculateSimulation(p2Inputs, p2.specificExpenses, p2Surplus)
-            val p2Objectives = calculateObjectivesFromYears(p2Simulation, p2Inputs.bonusStdWeight)
+            val p2Objectives = calculateObjectivesFromYears(
+                years = p2Simulation,
+                bonusStdWeight = p2Inputs.bonusStdWeight,
+                legacyTarget = p2Inputs.soldiDaConservare
+            )
             val p2Sensitivity = OptimizationLogic.runSensitivityAnalysis(p2Inputs, p2.specificExpenses, p2Surplus)
 
             // Compute deltas (Profile 2 - Profile 1)
@@ -714,5 +803,10 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                 deltaSensitivityResults = deltaSens
             }
         }
+    }
+
+    private fun clearOptimizationArtifacts() {
+        paretoFrontResult = null
+        optimizationResult = null
     }
 }

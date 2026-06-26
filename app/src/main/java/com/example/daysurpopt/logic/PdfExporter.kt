@@ -7,6 +7,8 @@ import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.os.Environment
 import com.example.daysurpopt.domain.FinancialInput
+import com.example.daysurpopt.domain.OptimizationMode
+import com.example.daysurpopt.domain.ParetoFrontResult
 import com.example.daysurpopt.domain.SimulationYear
 import com.example.daysurpopt.logic.calculateObjectivesFromYears
 import com.example.daysurpopt.R
@@ -36,6 +38,8 @@ object PdfExporter {
         sensitivityResults: List<com.example.daysurpopt.domain.SensitivityResult>? = null,
         aiComment: String? = null,
         modelName: String? = null,
+        optimizationMode: OptimizationMode = OptimizationMode.BEST_COMPROMISE,
+        paretoFrontResult: ParetoFrontResult? = null,
         compareState: com.example.daysurpopt.domain.CompareState? = null,
         profile2Results: Triple<com.example.daysurpopt.domain.ObjectiveResults?, List<SimulationYear>, List<com.example.daysurpopt.domain.SensitivityResult>?>? = null,
         deltaResults: Triple<com.example.daysurpopt.domain.DeltaObjectiveResults?, List<com.example.daysurpopt.domain.DeltaSimulationYear>, List<com.example.daysurpopt.domain.DeltaSensitivityResult>?>? = null
@@ -367,7 +371,7 @@ object PdfExporter {
         )
 
         // --- 4. RESULTS SUMMARY ---
-        val objResults = calculateObjectivesFromYears(results, inputs.bonusStdWeight)
+        val objResults = calculateObjectivesFromYears(results, inputs.bonusStdWeight, inputs.soldiDaConservare)
         val deltaObj = deltaResults?.first
         
         val resRows = mutableListOf<List<String>>()
@@ -384,6 +388,33 @@ object PdfExporter {
         resRows.add(resRow(context.getString(R.string.label_objective_function), objectiveValue, deltaObj?.deltaFObjW))
         resRows.add(resRow(context.getString(R.string.label_average_utility), results.map { it.funzioneUtilita }.average(), deltaObj?.deltaAvgUtilita))
         resRows.add(resRow(context.getString(R.string.label_stability_index), objResults.stabilityIndex, deltaObj?.deltaStabilityIndex))
+        if (paretoFrontResult != null) {
+            resRows.add(
+                listOf(
+                    context.getString(R.string.optimization_mode_title),
+                    if (optimizationMode == OptimizationMode.BEST_COMPROMISE) {
+                        context.getString(R.string.optimization_mode_best_compromise)
+                    } else {
+                        context.getString(R.string.optimization_mode_pareto_front)
+                    }
+                )
+            )
+            resRows.add(
+                listOf(
+                    context.getString(R.string.pareto_front_points_label),
+                    paretoFrontResult.points.size.toString()
+                )
+            )
+            paretoFrontResult.selectedCompromise?.let { selected ->
+                resRows.add(
+                    resRow(
+                        context.getString(R.string.pareto_compromise_score_label),
+                        selected.compromiseScore ?: 0.0,
+                        null
+                    )
+                )
+            }
+        }
         
         // Final capital delta
         val cap1 = results.lastOrNull()?.capitaleFineAnno ?: 0.0

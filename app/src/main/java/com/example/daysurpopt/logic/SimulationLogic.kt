@@ -414,21 +414,30 @@ fun computeObjective(avgUtilita: Double, stdDevUtilita: Double, bonusStdWeight: 
     return (avgUtilita + weight * stabilityTerm) / (1.0 + weight)
 }
 
-fun calculateObjectivesFromYears(years: List<SimulationYear>, bonusStdWeight: Double): ObjectiveResults {
+fun calculateObjectivesFromYears(
+    years: List<SimulationYear>,
+    bonusStdWeight: Double,
+    legacyTarget: Double? = null
+): ObjectiveResults {
     if (years.isEmpty()) return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0)
+
+    val finalCapital = years.lastOrNull()?.capitaleFineAnno ?: 0.0
+    val legacyGap = finalCapital - (legacyTarget ?: 0.0)
+    val isFeasible = !years.any { it.violazioneLascito } &&
+        years.none { !it.funzioneUtilita.isFinite() || it.funzioneUtilita < 0.0 }
 
     // NEW LOGIC: Any constraint violation or math error forces objective to 0.0.
     if (years.any { it.violazioneLascito }) {
         AppDebugLog.add("SimLogic", "Zero objective: violazioneLascito detected in ${years.count { it.violazioneLascito }} years")
-        return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0)
+        return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0, false, finalCapital, legacyGap)
     }
     if (years.any { !it.funzioneUtilita.isFinite() }) {
         AppDebugLog.add("SimLogic", "Zero objective: Non-finite utility detected")
-        return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0)
+        return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0, false, finalCapital, legacyGap)
     }
     if (years.any { it.funzioneUtilita < 0 }) {
         AppDebugLog.add("SimLogic", "Zero objective: Negative utility detected")
-        return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0)
+        return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0, false, finalCapital, legacyGap)
     }
 
     val utilities = years.map { it.funzioneUtilita }
@@ -436,7 +445,7 @@ fun calculateObjectivesFromYears(years: List<SimulationYear>, bonusStdWeight: Do
     
     if (!avgUtilita.isFinite() || avgUtilita <= 0.0) {
         AppDebugLog.add("SimLogic", "Zero objective: avgUtilita <= 0 or infinite: $avgUtilita")
-        return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0)
+        return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0, false, finalCapital, legacyGap)
     }
 
     val stdDevUtilita = calculateStandardDeviation(utilities)
@@ -457,7 +466,16 @@ fun calculateObjectivesFromYears(years: List<SimulationYear>, bonusStdWeight: Do
         0.0
     }
 
-    return ObjectiveResults(fObjW, fObj0, stabilityIndex, stdDevUtilita, avgUtilita)
+    return ObjectiveResults(
+        fObjW = fObjW,
+        fObj0 = fObj0,
+        stabilityIndex = stabilityIndex,
+        stdDev = stdDevUtilita,
+        avgUtilita = avgUtilita,
+        isFeasible = isFeasible,
+        finalCapital = finalCapital,
+        legacyGap = legacyGap
+    )
 }
 
 fun calculateSimulationWithWeight(
@@ -467,6 +485,10 @@ fun calculateSimulationWithWeight(
     surplusOffset: Double = 0.0
 ): Pair<Double, List<SimulationYear>> {
     val years = calculateSimulation(inputs, specificExpenses, surplusData, surplusOffset)
-    val results = calculateObjectivesFromYears(years, inputs.bonusStdWeight)
+    val results = calculateObjectivesFromYears(
+        years = years,
+        bonusStdWeight = inputs.bonusStdWeight,
+        legacyTarget = inputs.soldiDaConservare
+    )
     return results.fObjW to years
 }

@@ -42,7 +42,7 @@
     <string name="impact_on_objective_function">Impact on Objective Function:</string>
     <string name="results_parameters_used">Used Parameters: P1=%1$.4f, P2=%2$d, P3=%3$.4f, P4=%4$d</string>
     <string name="final_objective_function">Final Objective Function: %1$.3f</string>
-    <string name="definition_objective_function">Definition: (AvgUtility + (w/100) * (AvgUtility/StdDev)) / (1 + w/100), w=%1$.2f</string>
+    <string name="definition_objective_function">Current scalar score of displayed plan: (AvgUtility + (w/100) * (AvgUtility/StdDev)) / (1 + w/100), w=%1$.2f</string>
     <string name="definition_std_dev">Definition: Standard Deviation of yearly utility values.</string>
     <string name="definition_stability_index">Formula: Stability Index = StdDev / (w/100).\n&gt;&gt; 1: Low w, priority on Avg Utility.\n&lt;&lt; 1: High w, priority on Stability.\n~ 1: Balanced.</string>
     <string name="average_utility">Average Utility: %1$.3f</string>
@@ -183,6 +183,24 @@
     <string name="assumptions_chart_trace_degradation">Degradation</string>
     <string name="go_back">Go Back</string>
     <string name="optimization_parameters_group">Optimization Parameters</string>
+    <string name="optimization_mode_title">Optimization Mode</string>
+    <string name="optimization_mode_best_compromise">Best Compromise</string>
+    <string name="optimization_mode_pareto_front">Pareto Front</string>
+    <string name="optimization_mode_best_compromise_desc">Automatically applies one balanced Pareto-optimal plan.</string>
+    <string name="optimization_mode_pareto_front_desc">Computes the full non-dominated feasible set without overwriting current parameters.</string>
+    <string name="optimization_mode_best_compromise_definition">Selection rule: choose the Pareto-optimal plan closest to the normalized ideal point using an augmented ASF.</string>
+    <string name="optimization_mode_pareto_front_definition">Pareto rule: keep all feasible non-dominated plans maximizing Avg Utility and minimizing Std Dev.</string>
+    <string name="optimization_mode_compromise_summary">Best compromise selected from %1$d Pareto points.\nCompromise score: %2$.4f\nApplied params: P1=%3$.4f P2=%4$d P3=%5$.4f P4=%6$d</string>
+    <string name="optimization_mode_pareto_summary">Pareto front computed with %1$d non-dominated feasible plans.</string>
+    <string name="pareto_reference_compromise">Reference compromise from the front: score %1$.4f | P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
+    <string name="pareto_front_ideal_summary">Front ideals: Avg Utility %1$.4f | Std Dev %2$.4f</string>
+    <string name="pareto_front_points_label">Pareto Front Points</string>
+    <string name="pareto_compromise_score_label">Reference Compromise Score</string>
+    <string name="result_feasibility">Feasibility</string>
+    <string name="result_feasible">Feasible</string>
+    <string name="result_infeasible">Infeasible</string>
+    <string name="result_final_capital">Final Capital</string>
+    <string name="result_legacy_gap">Legacy Gap</string>
     
     <!-- Sensitivity Analysis Strings -->
     <string name="sens_p1">P1 Saving Ratio</string>
@@ -247,7 +265,9 @@
     <string name="charts_optimizing_params">Optimizing parameters…</string>
     <string name="charts_optimal_f_results">Optimal F(w)=%1$.3f | F(0)=%2$.3f</string>
     <string name="charts_stability_index_value">Stability Index: %1$.2f (1 means balanced optimization between fobj and small std dev)</string>
-    <string name="charts_fobj_formula">fobj = (AvgUtil + (w/100) * (AvgUtil / StdDev)) / (1 + w/100)</string>
+    <string name="charts_fobj_formula">Scalar exploration formula: fobj = (AvgUtil + (w/100) * (AvgUtil / StdDev)) / (1 + w/100)</string>
+    <string name="charts_best_compromise_summary">Best-compromise mode: selected from %1$d Pareto points | score %2$.4f | AvgUtil %3$.4f | StdDev %4$.4f</string>
+    <string name="charts_pareto_front_summary">Pareto-front mode: %1$d feasible non-dominated plans | ideal AvgUtil %2$.4f | ideal StdDev %3$.4f</string>
     <string name="charts_switch_3d">Switch to 3D Surface</string>
     <string name="charts_switch_2d">Switch to 2D Heatmap</string>
     <string name="charts_toggle_perspective">Perspective: ON</string>

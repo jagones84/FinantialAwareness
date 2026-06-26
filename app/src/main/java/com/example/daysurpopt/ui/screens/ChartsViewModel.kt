@@ -103,7 +103,7 @@ class ChartsViewModel(application: Application) : AndroidViewModel(application) 
             val yearsOpt = withContext(Dispatchers.Default) {
                 calculateSimulation(inputs, expenses, surplusData)
             }
-            val resultsOpt = calculateObjectivesFromYears(yearsOpt, w)
+            val resultsOpt = calculateObjectivesFromYears(yearsOpt, w, inputs.soldiDaConservare)
             optimalObjW = resultsOpt.fObjW
             optimalObj0 = resultsOpt.fObj0
             optimalStabilityIndex = resultsOpt.stabilityIndex
@@ -113,7 +113,7 @@ class ChartsViewModel(application: Application) : AndroidViewModel(application) 
                 val years2 = withContext(Dispatchers.Default) {
                     calculateSimulation(profile2Inputs, profile2Expenses, profile2Surplus)
                 }
-                optimalObjW_2 = calculateObjectivesFromYears(years2, w).fObjW
+                optimalObjW_2 = calculateObjectivesFromYears(years2, w, profile2Inputs.soldiDaConservare).fObjW
 
                 val in1on2 = profile2Inputs.copy(
                     p1SavingRatioSurplus = fixedP1,
@@ -125,7 +125,7 @@ class ChartsViewModel(application: Application) : AndroidViewModel(application) 
                 val years1on2 = withContext(Dispatchers.Default) {
                     calculateSimulation(in1on2, profile2Expenses, profile2Surplus)
                 }
-                optimalObjP1OnP2 = calculateObjectivesFromYears(years1on2, w).fObjW
+                optimalObjP1OnP2 = calculateObjectivesFromYears(years1on2, w, in1on2.soldiDaConservare).fObjW
 
                 val in2on1 = inputs.copy(
                     p1SavingRatioSurplus = profile2Inputs.p1SavingRatioSurplus,
@@ -137,7 +137,7 @@ class ChartsViewModel(application: Application) : AndroidViewModel(application) 
                 val years2on1 = withContext(Dispatchers.Default) {
                     calculateSimulation(in2on1, expenses, surplusData)
                 }
-                optimalObjP2OnP1 = calculateObjectivesFromYears(years2on1, w).fObjW
+                optimalObjP2OnP1 = calculateObjectivesFromYears(years2on1, w, in2on1.soldiDaConservare).fObjW
             }
 
             // 3. Grids

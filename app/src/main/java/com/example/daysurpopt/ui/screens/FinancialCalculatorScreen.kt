@@ -20,7 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.daysurpopt.R
 import com.example.daysurpopt.data.LanguageRepository
+import com.example.daysurpopt.domain.OptimizationMode
 import com.example.daysurpopt.domain.ObjectiveResults
+import com.example.daysurpopt.domain.ParetoFrontResult
 import com.example.daysurpopt.domain.SimulationYear
 import com.example.daysurpopt.ui.tables.SimulationResultTable
 import com.example.daysurpopt.ui.dialogs.ProfilesDialog
@@ -67,8 +69,10 @@ fun FinancialCalculatorScreen(
         profile1Name = viewModel.compareState.profile1Name,
         profile2Name = viewModel.compareState.profile2Name,
         optimizing = viewModel.optimizing,
+        optimizationMode = viewModel.optimizationMode,
         objectiveFunctionValue = viewModel.objectiveFunctionValue,
         optimizationResult = viewModel.optimizationResult,
+        paretoFrontResult = viewModel.paretoFrontResult,
         objectiveResults = viewModel.objectiveResults,
         deltaObjectiveResults = viewModel.deltaObjectiveResults,
         simulationResults = viewModel.simulationResults,
@@ -79,6 +83,7 @@ fun FinancialCalculatorScreen(
         inputs = viewModel.inputs,
         onManageProfilesClick = { showProfilesDialog = true },
         onNavigate = { route -> navController.navigate(route) },
+        onUpdateOptimizationMode = { mode -> viewModel.updateOptimizationMode(mode) },
         onRunOptimization = { viewModel.runOptimization() },
         onRunSimulation = { viewModel.runSimulation() },
         onRunSensitivityAnalysis = { viewModel.runSensitivityAnalysis() },
@@ -98,8 +103,10 @@ fun FinancialCalculatorContent(
     profile1Name: String?,
     profile2Name: String?,
     optimizing: Boolean,
+    optimizationMode: OptimizationMode,
     objectiveFunctionValue: Double?,
     optimizationResult: OptimizationResult?,
+    paretoFrontResult: ParetoFrontResult?,
     objectiveResults: ObjectiveResults?,
     deltaObjectiveResults: com.example.daysurpopt.domain.DeltaObjectiveResults?,
     simulationResults: List<SimulationYear>,
@@ -110,6 +117,7 @@ fun FinancialCalculatorContent(
     inputs: com.example.daysurpopt.domain.FinancialInput,
     onManageProfilesClick: () -> Unit,
     onNavigate: (String) -> Unit,
+    onUpdateOptimizationMode: (OptimizationMode) -> Unit,
     onRunOptimization: () -> Unit,
     onRunSimulation: () -> Unit,
     onRunSensitivityAnalysis: () -> Unit,
@@ -229,6 +237,50 @@ fun FinancialCalculatorContent(
                     onClick = { onNavigate("gaConfig") },
                     text = stringResource(R.string.genetic_algorithm_parameters)
                 )
+                Text(
+                    text = stringResource(R.string.optimization_mode_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { onUpdateOptimizationMode(OptimizationMode.BEST_COMPROMISE) },
+                        modifier = Modifier.weight(1f),
+                        colors = if (optimizationMode == OptimizationMode.BEST_COMPROMISE) {
+                            ButtonDefaults.buttonColors()
+                        } else {
+                            ButtonDefaults.outlinedButtonColors()
+                        }
+                    ) {
+                        Text(stringResource(R.string.optimization_mode_best_compromise))
+                    }
+                    OutlinedButton(
+                        onClick = { onUpdateOptimizationMode(OptimizationMode.PARETO_FRONT) },
+                        modifier = Modifier.weight(1f),
+                        colors = if (optimizationMode == OptimizationMode.PARETO_FRONT) {
+                            ButtonDefaults.outlinedButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        } else {
+                            ButtonDefaults.outlinedButtonColors()
+                        }
+                    ) {
+                        Text(stringResource(R.string.optimization_mode_pareto_front))
+                    }
+                }
+                Text(
+                    text = if (optimizationMode == OptimizationMode.BEST_COMPROMISE) {
+                        stringResource(R.string.optimization_mode_best_compromise_desc)
+                    } else {
+                        stringResource(R.string.optimization_mode_pareto_front_desc)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             // Section 3: Analysis & Actions
@@ -304,13 +356,51 @@ fun FinancialCalculatorContent(
                             }
 
                             optimizationResult?.let { res ->
+                                val summaryText = if (res.mode == OptimizationMode.BEST_COMPROMISE) {
+                                    stringResource(
+                                        R.string.optimization_mode_compromise_summary,
+                                        res.paretoPointCount,
+                                        res.compromiseScore ?: 0.0,
+                                        res.p1,
+                                        res.p2,
+                                        res.p3,
+                                        res.p4
+                                    )
+                                } else {
+                                    stringResource(R.string.optimization_mode_pareto_summary, res.paretoPointCount)
+                                }
                                 Text(
-                                    text = stringResource(R.string.ga_optimization_result, 
-                                        res.gaFitness, res.bonusWeight, res.finalFitness, 
-                                        res.p1, res.p2, res.p3, res.p4),
+                                    text = summaryText,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
+                                if (res.mode == OptimizationMode.PARETO_FRONT && paretoFrontResult?.selectedCompromise != null) {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.pareto_reference_compromise,
+                                            paretoFrontResult.selectedCompromise!!.compromiseScore ?: 0.0,
+                                            paretoFrontResult.selectedCompromise!!.params.p1,
+                                            paretoFrontResult.selectedCompromise!!.params.p2,
+                                            paretoFrontResult.selectedCompromise!!.params.p3,
+                                            paretoFrontResult.selectedCompromise!!.params.p4
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                                    )
+                                }
+                                paretoFrontResult?.let { front ->
+                                    if (front.points.isNotEmpty()) {
+                                        Text(
+                                            text = stringResource(
+                                                R.string.pareto_front_ideal_summary,
+                                                front.idealAvgUtility,
+                                                front.idealStdDevUtility
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                                        )
+                                    }
+                                }
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f))
                             }
 
@@ -340,7 +430,11 @@ fun FinancialCalculatorContent(
                                     }
 
                                 Text(
-                                    text = stringResource(R.string.definition_objective_function, inputs.bonusStdWeight),
+                                    text = if (optimizationMode == OptimizationMode.BEST_COMPROMISE) {
+                                        stringResource(R.string.optimization_mode_best_compromise_definition)
+                                    } else {
+                                        stringResource(R.string.optimization_mode_pareto_front_definition)
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
                                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
@@ -441,6 +535,72 @@ fun FinancialCalculatorContent(
                                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                 )
+
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(
+                                        text = stringResource(R.string.result_feasibility),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = if (results.isFeasible) stringResource(R.string.result_feasible) else stringResource(R.string.result_infeasible),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        color = if (results.isFeasible) PositiveDelta else NegativeDelta
+                                    )
+                                }
+
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(
+                                        text = stringResource(R.string.result_final_capital),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Row {
+                                        Text(
+                                            text = String.format(Locale.getDefault(), "%.2f", results.finalCapital),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        if (isComparing && deltaObjectiveResults != null) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            val d = deltaObjectiveResults.deltaFinalCapital
+                                            Text(
+                                                text = if (d >= 0) stringResource(R.string.delta_val_positive, String.format(Locale.US, "%.2f", d)) else stringResource(R.string.delta_val_negative, String.format(Locale.US, "%.2f", d)),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                color = if (d >= 0) PositiveDelta else NegativeDelta
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(
+                                        text = stringResource(R.string.result_legacy_gap),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Row {
+                                        Text(
+                                            text = String.format(Locale.getDefault(), "%.2f", results.legacyGap),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            color = if (results.legacyGap >= 0.0) MaterialTheme.colorScheme.onPrimaryContainer else NegativeDelta
+                                        )
+                                        if (isComparing && deltaObjectiveResults != null) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            val d = deltaObjectiveResults.deltaLegacyGap
+                                            Text(
+                                                text = if (d >= 0) stringResource(R.string.delta_val_positive, String.format(Locale.US, "%.2f", d)) else stringResource(R.string.delta_val_negative, String.format(Locale.US, "%.2f", d)),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                color = if (d >= 0) PositiveDelta else NegativeDelta
+                                            )
+                                        }
+                                    }
+                                }
 
                                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -600,9 +760,11 @@ fun FinancialCalculatorPreview() {
         profile1Name = "User",
         profile2Name = null,
         optimizing = false,
+        optimizationMode = OptimizationMode.BEST_COMPROMISE,
         objectiveFunctionValue = 0.5,
         optimizationResult = null,
-        objectiveResults = ObjectiveResults(0.5, 0.4, 0.8, 0.1, 0.6),
+        paretoFrontResult = null,
+        objectiveResults = ObjectiveResults(0.5, 0.4, 0.8, 0.1, 0.6, true, 50000.0, 1000.0),
         deltaObjectiveResults = null,
         simulationResults = emptyList(),
         profile2SimulationResults = null,
@@ -612,6 +774,7 @@ fun FinancialCalculatorPreview() {
         inputs = com.example.daysurpopt.domain.FinancialInput(),
         onManageProfilesClick = {},
         onNavigate = {},
+        onUpdateOptimizationMode = {},
         onRunOptimization = {},
         onRunSimulation = {},
         onRunSensitivityAnalysis = {},

@@ -36,5 +36,8 @@ data class ObjectiveResults(
     val fObj0: Double,
     val stabilityIndex: Double,
     val stdDev: Double,
-    val avgUtilita: Double
+    val avgUtilita: Double,
+    val isFeasible: Boolean = false,
+    val finalCapital: Double = 0.0,
+    val legacyGap: Double = 0.0
 )

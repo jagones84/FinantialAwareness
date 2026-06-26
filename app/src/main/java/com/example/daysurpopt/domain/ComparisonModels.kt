@@ -19,7 +19,9 @@ data class DeltaObjectiveResults(
     val deltaFObj0: Double,
     val deltaStabilityIndex: Double,
     val deltaStdDev: Double,
-    val deltaAvgUtilita: Double
+    val deltaAvgUtilita: Double,
+    val deltaLegacyGap: Double = 0.0,
+    val deltaFinalCapital: Double = 0.0
 )
 
 /**
@@ -63,7 +65,9 @@ object DeltaCalculator {
             deltaFObj0 = results2.fObj0 - results1.fObj0,
             deltaStabilityIndex = results2.stabilityIndex - results1.stabilityIndex,
             deltaStdDev = results2.stdDev - results1.stdDev,
-            deltaAvgUtilita = results2.avgUtilita - results1.avgUtilita
+            deltaAvgUtilita = results2.avgUtilita - results1.avgUtilita,
+            deltaLegacyGap = results2.legacyGap - results1.legacyGap,
+            deltaFinalCapital = results2.finalCapital - results1.finalCapital
         )
     }
 

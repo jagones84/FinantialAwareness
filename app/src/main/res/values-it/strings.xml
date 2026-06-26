@@ -41,7 +41,7 @@
     <string name="analysis_in_progress">Analisi in corso…</string>
     <string name="impact_on_objective_function">Impatto sulla Funzione Obiettivo:</string>
     <string name="final_objective_function">Funzione Obiettivo Finale: %1$.3f</string>
-    <string name="definition_objective_function">Definizione: (UtilitàMedia + (w/100) * (UtilitàMedia/DevStandard)) / (1 + w/100), w=%1$.2f</string>
+    <string name="definition_objective_function">Punteggio scalare corrente del piano mostrato: (UtilitàMedia + (w/100) * (UtilitàMedia/DevStandard)) / (1 + w/100), w=%1$.2f</string>
     <string name="definition_std_dev">Definizione: Deviazione Standard dei valori di utilità annuali.</string>
     <string name="definition_stability_index">Formula: Indice Stabilità = DevStd / (w/100).\n>> 1: w basso, priorità Utilità Media.\n&lt;&lt; 1: w alto, priorità Stabilità.\n~ 1: Bilanciato.</string>
     <string name="average_utility">Utilità media: %1$.3f</string>
@@ -169,6 +169,24 @@
     <string name="assumptions_chart_trace_degradation">Degrado</string>
     <string name="go_back">Torna Indietro</string>
     <string name="optimization_parameters_group">Parametri di Ottimizzazione</string>
+    <string name="optimization_mode_title">Modalità di ottimizzazione</string>
+    <string name="optimization_mode_best_compromise">Miglior compromesso</string>
+    <string name="optimization_mode_pareto_front">Frontiera di Pareto</string>
+    <string name="optimization_mode_best_compromise_desc">Applica automaticamente un piano Pareto-ottimo bilanciato.</string>
+    <string name="optimization_mode_pareto_front_desc">Calcola l\'intero insieme fattibile non dominato senza sovrascrivere i parametri correnti.</string>
+    <string name="optimization_mode_best_compromise_definition">Regola di selezione: scegli il piano Pareto-ottimo più vicino al punto ideale normalizzato tramite ASF aumentata.</string>
+    <string name="optimization_mode_pareto_front_definition">Regola di Pareto: mantieni tutti i piani fattibili non dominati che massimizzano Utilità Media e minimizzano Deviazione Standard.</string>
+    <string name="optimization_mode_compromise_summary">Miglior compromesso selezionato da %1$d punti di Pareto.\nPunteggio compromesso: %2$.4f\nParametri applicati: P1=%3$.4f P2=%4$d P3=%5$.4f P4=%6$d</string>
+    <string name="optimization_mode_pareto_summary">Frontiera di Pareto calcolata con %1$d piani fattibili non dominati.</string>
+    <string name="pareto_reference_compromise">Compromesso di riferimento dalla frontiera: punteggio %1$.4f | P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
+    <string name="pareto_front_ideal_summary">Ideali della frontiera: Utilità Media %1$.4f | Dev. Std. %2$.4f</string>
+    <string name="pareto_front_points_label">Punti della frontiera di Pareto</string>
+    <string name="pareto_compromise_score_label">Punteggio compromesso di riferimento</string>
+    <string name="result_feasibility">Fattibilità</string>
+    <string name="result_feasible">Fattibile</string>
+    <string name="result_infeasible">Non fattibile</string>
+    <string name="result_final_capital">Capitale finale</string>
+    <string name="result_legacy_gap">Margine lascito</string>
 
     <!-- Sensitivity Analysis Strings -->
     <string name="sens_p1">P1 Tasso Risparmio</string>
@@ -234,7 +252,9 @@
     <string name="charts_optimizing_params">Ottimizzazione parametri in corso…</string>
     <string name="charts_optimal_f_results">F(w) Ottimale = %1$.3f | F(0) = %2$.3f</string>
     <string name="charts_stability_index_value">Indice Stabilità: %1$.2f (1 significa ottimizzazione bilanciata tra fobj e piccola dev std)</string>
-    <string name="charts_fobj_formula">fobj = (UtilitàMedia + (w/100) * (UtilitàMedia / DevStd)) / (1 + w/100)</string>
+    <string name="charts_fobj_formula">Formula scalare esplorativa: fobj = (UtilitàMedia + (w/100) * (UtilitàMedia / DevStd)) / (1 + w/100)</string>
+    <string name="charts_best_compromise_summary">Modalità miglior compromesso: selezionato da %1$d punti di Pareto | punteggio %2$.4f | UtilitàMedia %3$.4f | DevStd %4$.4f</string>
+    <string name="charts_pareto_front_summary">Modalità frontiera di Pareto: %1$d piani fattibili non dominati | ideale UtilitàMedia %2$.4f | ideale DevStd %3$.4f</string>
     <string name="charts_switch_3d">Passa a 3D</string>
     <string name="charts_switch_2d">Passa a 2D</string>
     <string name="charts_toggle_perspective">Prospettiva: ON</string>

@@ -71,7 +71,7 @@ object ChartLogic {
                     bonusStdWeight = w
                 )
                 val years1 = calculateSimulation(in1, expensesSnapshot, surplusData)
-                val res1 = calculateObjectivesFromYears(years1, w)
+                val res1 = calculateObjectivesFromYears(years1, w, in1.soldiDaConservare)
                 z[iy][ix] = res1.fObjW
 
                 // Profile 2 Delta logic
@@ -86,7 +86,7 @@ object ChartLogic {
                         bonusStdWeight = w
                     )
                     val years2 = calculateSimulation(in2, profile2Expenses, profile2Surplus)
-                    val res2 = calculateObjectivesFromYears(years2, w)
+                    val res2 = calculateObjectivesFromYears(years2, w, in2.soldiDaConservare)
                     
                     val z1val = res1.fObjW
                     val z2val = res2.fObjW
@@ -164,7 +164,7 @@ object ChartLogic {
                     bonusStdWeight = w
                 )
                 val years1 = calculateSimulation(in1, expensesSnapshot, surplusData)
-                val res1 = calculateObjectivesFromYears(years1, w)
+                val res1 = calculateObjectivesFromYears(years1, w, in1.soldiDaConservare)
                 z[iy][ix] = res1.fObjW
                 
                 // Profile 2 Delta logic
@@ -179,7 +179,7 @@ object ChartLogic {
                         bonusStdWeight = w
                     )
                     val years2 = calculateSimulation(in2, profile2Expenses, profile2Surplus)
-                    val res2 = calculateObjectivesFromYears(years2, w)
+                    val res2 = calculateObjectivesFromYears(years2, w, in2.soldiDaConservare)
                     
                     val z1val = res1.fObjW
                     val z2val = res2.fObjW

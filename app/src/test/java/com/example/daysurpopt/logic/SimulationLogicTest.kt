@@ -3,6 +3,7 @@ package com.example.daysurpopt.logic
 import com.example.daysurpopt.domain.FinancialInput
 import com.example.daysurpopt.domain.SurplusInput
 import com.example.daysurpopt.domain.Defaults
+import com.example.daysurpopt.domain.SimulationYear
 import com.example.daysurpopt.domain.SpecificExpense
 import org.junit.Test
 import org.junit.Assert.*
@@ -167,5 +168,34 @@ class SimulationLogicTest {
         }
         
         assertFalse("Should not find any drop in fobj when increasing inheritance", foundDrop)
+    }
+
+    @Test
+    fun calculateObjectivesFromYears_reports_feasibility_and_legacy_gap() {
+        val years = listOf(
+            SimulationYear(
+                eta = 65,
+                funzioneUtilita = 0.2,
+                capitaleFineAnno = 60000.0,
+                violazioneLascito = false
+            ),
+            SimulationYear(
+                eta = 66,
+                funzioneUtilita = 0.3,
+                capitaleFineAnno = 55000.0,
+                violazioneLascito = false
+            )
+        )
+
+        val result = calculateObjectivesFromYears(
+            years = years,
+            bonusStdWeight = 0.5,
+            legacyTarget = 50000.0
+        )
+
+        assertEquals(0.25, result.avgUtilita, 1e-9)
+        assertTrue(result.isFeasible)
+        assertEquals(5000.0, result.legacyGap, 1e-9)
+        assertEquals(55000.0, result.finalCapital, 1e-9)
     }
 }
