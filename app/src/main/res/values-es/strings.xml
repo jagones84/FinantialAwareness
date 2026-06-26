@@ -1,0 +1,262 @@
+<resources>
+    <string name="app_name">Conciencia Financiera</string>
+    <string name="financial_calculator_title">Calculadora Financiera Personal</string>
+    <string name="reset_inputs">Restablecer Valores</string>
+    <string name="manage_profiles">Administrar Perfiles</string>
+    <string name="surplus_calculation">Calcular Superávit</string>
+    <string name="calculated_daily_surplus">Superávit Diario Calculado:</string>
+    <string name="work_with_mortgage">Trabajo (con hipoteca/alquiler): %1$s</string>
+    <string name="work_without_mortgage">Trabajo (sin hipoteca/alquiler): %1$s</string>
+    <string name="pension_with_mortgage">Pensión (con hipoteca/alquiler): %1$s</string>
+    <string name="pension_without_mortgage">Pensión (sin hipoteca/alquiler): %1$s</string>
+    <string name="work_surplus_average">Trabajo (promedio con/sin hipoteca): %1$s</string>
+    <string name="pension_surplus_average">Pensión (promedio con/sin hipoteca): %1$s</string>
+    <string name="mortgage_paid_until_age">Hipoteca/alquiler pagado hasta los %1$d años</string>
+    <string name="add_edit_one_time_expenses">Agregar/Editar Gastos Únicos</string>
+    <string name="sort_expenses">Ordenar Gastos</string>
+    <string name="sort_age">Ordenar por Edad</string>
+    <string name="sort_amount">Ordenar por Monto</string>
+    <string name="sort_utility">Ordenar por Utilidad</string>
+    <string name="model_assumptions">Supuestos del Modelo</string>
+    <string name="assumptions_reset_defaults">Restablecer valores predeterminados</string>
+    <string name="assumptions_chart_utility_title">Utilidad vs Gasto diario extra</string>
+    <string name="assumptions_chart_spending_x">Gasto diario extra (€)</string>
+    <string name="assumptions_chart_utility_y">Utilidad [0–1]</string>
+    <string name="assumptions_chart_trace_utility">Utilidad</string>
+    <string name="assumptions_chart_degradation_title">Factor de degradación por edad</string>
+    <string name="assumptions_chart_age_x">Edad (años)</string>
+    <string name="assumptions_chart_degradation_y">Factor de degradación</string>
+    <string name="assumptions_chart_trace_degradation">Degradación</string>
+    <string name="expected_inheritance">Herencia prevista (€)</string>
+    <string name="capital_to_leave">Capital para dejar en herencia o conservar para la vejez (€)</string>
+    <string name="net_tfr_at_retirement">TFR neto en la jubilación (€)</string>
+    <string name="annual_interest_rate_on_capital">Tasa de interés anual sobre el capital (neta de inflación, ej. 0.02)</string>
+    <string name="annual_interest_rate_on_debt">Tasa de interés anual sobre la deuda (ej. 0.07)</string>
+    <string name="initial_capital_at_current_age">Capital inicial a la edad actual (€)</string>
+    <string name="extra_daily_spending_for_utility">Gasto diario extra para utilidad≈0.9 (€)</string>
+    <string name="current_age">Edad actual (años)</string>
+    <string name="retirement_age">Edad de jubilación (años)</string>
+    <string name="inheritance_reception_age">Edad de recepción de la herencia (años)</string>
+    <string name="end_of_horizon_age">Edad final del horizonte (años)</string>
+    <string name="minimum_utility_threshold">Umbral mínimo de utilidad (0–1)</string>
+    <string name="constant_utility_weight">Peso Minimización Desviación Estándar (0–inf)</string>
+    <string name="optimization_parameters_title">Variables Optimizadas</string>
+    <string name="optimization_parameters_description">Estos parámetros son tanto entradas (puedes ajustarlos) como salidas (el algoritmo de optimización los actualiza para encontrar la mejor estrategia financiera).</string>
+    <string name="p1_surplus_fraction_saved">P1: Fracción del superávit ahorrado (0–1)</string>
+    <string name="p2_end_of_savings_age">P2: Edad para dejar de ahorrar del superávit</string>
+    <string name="p3_annual_capital_spending_share">P3: Cuota de gasto anual de capital. Representa la fracción de la cuota teórica (Capital / Años Restantes) para gastar cada año. Ejemplo: P3 * (Capital / Años Restantes) es la cantidad erosionada del capital ese año.</string>
+    <string name="p4_start_of_capital_spending_age">P4: Edad para empezar a gastar capital (pre-jubilación)</string>
+    <string name="calculate_simulation_with_inputs">Calcular simulación con valores actuales</string>
+    <string name="genetic_algorithm_parameters">Parámetros del Algoritmo Genético</string>
+    <string name="optimize_objective_function">Optimizar Función Objetivo (buscar P1-P4 óptimos)</string>
+    <string name="optimization_in_progress">Optimización en curso…</string>
+    <string name="calculate_parameter_sensitivity">Calcular Sensibilidad de Parámetros</string>
+    <string name="analysis_in_progress">Análisis en curso…</string>
+    <string name="impact_on_objective_function">Impacto en la Función Objetivo:</string>
+    <string name="final_objective_function">Función Objetivo Final: %1$.3f</string>
+    <string name="definition_objective_function">Definición: (UtilidadMedia + (w/100) * (UtilidadMedia/DesvEst)) / (1 + w/100), w=%1$.2f</string>
+    <string name="definition_std_dev">Definición: Desviación Estándar de los valores de utilidad anuales.</string>
+    <string name="definition_stability_index">Fórmula: Índice Estabilidad = DesvEst / (w/100).\n>> 1: w bajo, prioridad Utilidad Media.\n&lt;&lt; 1: w alto, prioridad Estabilidad.\n~ 1: Equilibrado.</string>
+    <string name="average_utility">Utilidad Media: %1$.3f</string>
+    <string name="std_dev">Desviación Estándar: %1$.3f</string>
+    <string name="warning_utility_threshold_not_met">Advertencia: No se puede cumplir la restricción de utilidad mínima conservando el capital final. Intente reducir el umbral de utilidad mínima o el gasto diario para utilidad máxima.</string>
+    <string name="copyright_notice">Copyright (c) 2025 Giovanni Mauceri. Todos los derechos reservados.\nEsta aplicación es solo para uso personal. La distribución o el uso comercial no autorizados están estrictamente prohibidos.</string>
+    <string name="disclaimer">Descargo de responsabilidad: Esta aplicación es solo para fines informativos y no constituye asesoramiento financiero. El desarrollador no es un asesor financiero.</string>
+    <string name="ga_optimization_result">Función Objetivo (GA): %1$.3f (w=%2$.2f)\nFunción Objetivo refinada: %3$.3f\nP1=%4$.2f P2=%5$d P3=%6$.2f P4=%7$d</string>
+    <string name="sensitivity_calculation_failed">No se pudo calcular la sensibilidad (objetivo es cero o negativo).</string>
+    <string name="pdf_report_title">Informe de Simulación de Conciencia Financiera</string>
+    <string name="pdf_generated_on">Generado el: %1$s</string>
+    <string name="pdf_section_user_financial">Datos de Usuario y Financieros</string>
+    <string name="pdf_section_utility_model">Utilidad y Modelo</string>
+    <string name="pdf_section_optimization_params">Parámetros de Optimización (Usados)</string>
+    <string name="pdf_section_results_summary">Resumen de Resultados</string>
+    <string name="pdf_section_sensitivity_analysis">Análisis de Sensibilidad (Todos los Impactos)</string>
+    <string name="pdf_section_ai_comment">Análisis y Comentarios del Agente IA</string>
+    <string name="pdf_section_simulation_details">Detalles de la Simulación</string>
+    <string name="pdf_label_age">Edad Actual: %1$d, Jubilación: %2$d, Fin: %3$d</string>
+    <string name="pdf_label_capital">Capital Inicial: %1$s, Capital Objetivo: %2$s</string>
+    <string name="pdf_label_inheritance">Herencia: %1$s a la edad de %2$d</string>
+    <string name="pdf_label_tfr">TFR Neto: %1$s</string>
+    <string name="pdf_label_rates">Tasa Capital: %1$s, Tasa Deuda: %2$s</string>
+    <string name="pdf_label_utility_params">Gasto Max Utilidad: %1$s, Umbral Mín: %2$s, Peso (w): %3$s</string>
+    <string name="pdf_label_final_obj">Función Objetivo Final: %1$s</string>
+    <string name="pdf_label_avg_utility">Utilidad Media: %1$s</string>
+    <string name="pdf_label_stability">Índice Estabilidad: %1$s</string>
+    <string name="pdf_label_final_capital">Capital Final: %1$s</string>
+    <string name="pdf_table_header_parameter">Parámetro</string>
+    <string name="pdf_table_header_value">Valor</string>
+    <string name="pdf_table_header_impact">Impacto</string>
+    <string name="pdf_table_header_unit">Unidad</string>
+    <string name="pdf_table_header_age">Edad</string>
+    <string name="pdf_table_header_extra_spend">Gasto Extra (€)</string>
+    <string name="pdf_table_header_cap_end">Cap. Fin Año (€)</string>
+    <string name="pdf_table_header_util">Útil</string>
+    <string name="pdf_table_header_debt">Deuda (€)</string>
+    <string name="confirm_overwrite_title">¿Sobrescribir perfil?</string>
+    <string name="confirm_overwrite_message">Ya existe un perfil llamado "%1$s". ¿Deseas sobrescribirlo?</string>
+    <string name="overwrite">Sobrescribir</string>
+    <string name="cancel">Cancelar</string>
+
+    <string name="nav_simulation">Simulación</string>
+    <string name="nav_surplus">Superávit</string>
+    <string name="nav_charts">Gráficos</string>
+    <string name="nav_assumptions">Supuestos</string>
+    <string name="table_age">Edad</string>
+    <string name="table_extra_spending">Extra €/d</string>
+    <string name="table_capital_end_year">Cap. Fin (€)</string>
+    <string name="table_savings_ratio">%% Ahor.</string>
+    <string name="table_utility">Útil. [0-1]</string>
+    <string name="table_debt_repayment">Repago (€)</string>
+    <string name="table_debt_balance">Bal. Deuda</string>
+    <string name="table_capital_gained">Ganado (k€)</string>
+    <string name="table_parameter">PARÁMETRO</string>
+    <string name="table_impact">IMPACTO</string>
+    <string name="optimization_parameters_group">Parámetros de Optimización</string>
+    
+    <!-- Sensitivity Analysis Strings -->
+    <string name="sens_p1">P1 Tasa de Ahorro</string>
+    <string name="sens_p2">P2 Edad Fin Ahorro</string>
+    <string name="sens_p3">P3 %% Gasto Capital</string>
+    <string name="sens_p4">P4 Edad Inicio Gasto Cap.</string>
+    <string name="sens_inheritance">Herencia</string>
+    <string name="sens_keep">Capital a Conservar</string>
+    <string name="sens_tfr">TFR Neto</string>
+    <string name="sens_initial_cap">Capital Inicial</string>
+    <string name="sens_int_rate">Tasa Interés Ganancia</string>
+    <string name="sens_debt_rate">Tasa Interés Deuda</string>
+    <string name="sens_utility_threshold">Umbral Utilidad</string>
+    <string name="sens_max_spending">Gasto Max Utilidad</string>
+    <string name="sens_bonus_weight">Peso Bonus Std (w)</string>
+    <string name="sens_surplus">Superávit Diario</string>
+
+    <string name="unit_pt_10">pt / 10%</string>
+    <string name="unit_pt_year">pt / año</string>
+    <string name="unit_pt_10k">pt / 10k€</string>
+    <string name="unit_pt_1pp">pt / 1pp</string>
+    <string name="unit_pt_001">pt / 0.01</string>
+    <string name="unit_pt_100eur">pt / 100€ mes</string>
+    <string name="unit_pt_01">pt / 0.1</string>
+    <string name="select_language">Idioma</string>
+
+    <string name="user_data_title">Datos de Usuario</string>
+    <string name="user_data_button">Datos de Usuario</string>
+    <string name="section_personal_data">Datos Personales</string>
+    <string name="section_financial_data">Datos Financieros</string>
+    <string name="section_rates">Tasas de Interés</string>
+    <string name="section_utility_params">Parámetros de Utilidad</string>
+
+    <string name="section_data_input">Entrada de Datos y Configuración</string>
+    <string name="section_optimization_config">Configuración de Optimización</string>
+    <string name="section_analysis_actions">Análisis y Acciones</string>
+    <string name="section_utilities">Utilidades y Gestión</string>
+    <string name="open_charts">Ver Gráficos de Resultados</string>
+    <string name="charts_title">Gráficos</string>
+    <string name="charts_loading">Generando superficies…</string>
+    <string name="charts_subtitle">Las superficies muestran objetivo con/sin w (w=%1$.2f)</string>
+    <string name="charts_fixed_values_p3p4">Fijos: P3=%1$.4f P4=%2$d</string>
+    <string name="charts_fixed_values_p1p2">Fijos: P1=%1$.4f P2=%2$d</string>
+    <string name="charts_p1p2_title">Superficie 1: X=P1, Y=P2</string>
+    <string name="charts_p3p4_title">Superficie 2: X=P3, Y=P4</string>
+    <string name="charts_invalid_range_p2">Rango P2 inválido [%1$d..%2$d] (P2 debe ser &lt;= P4=%3$d)</string>
+    <string name="charts_invalid_range_p4">Rango P4 inválido [%1$d..%2$d] (P4 debe ser &gt;= P2=%3$d)</string>
+    <string name="charts_plotly_failed">No se pudo cargar Plotly. Verifica la conexión a Internet.</string>
+
+    <string name="charts_objective">fobj</string>
+    <string name="charts_2d_heatmap_cpu">Mapa de calor 2D (Renderizado CPU)</string>
+    <string name="charts_received_data">Datos Recibidos...</string>
+    <string name="charts_fallback_2d">Mapa de calor 2D de respaldo (WebGL fallido)</string>
+    <string name="charts_webview_active">WebView Activo - Esperando JS...</string>
+    <string name="charts_save_image">Guardar Imagen</string>
+    <string name="charts_reset_scale">Restablecer Escala</string>
+
+    <string name="open_debug_log">Registro Debug</string>
+    <string name="debug_log_title">Registro Debug</string>
+    <string name="copy">Copiar</string>
+    <string name="clear">Limpiar</string>
+    <string name="charts_interactive_weight">Peso Minim. Desv. Est. (w): %1$.2f</string>
+    <string name="charts_optimizing_params">Optimizando parámetros…</string>
+    <string name="charts_optimal_f_results">F(w) Óptimo = %1$.3f | F(0) = %2$.3f</string>
+    <string name="charts_stability_index_value">Índice Estabilidad [std / (w/100)]: %1$.2f</string>
+    <string name="charts_fobj_formula">fobj = (UtilidadMedia + (w/100) * (UtilidadMedia / DesvEst)) / (1 + w/100)</string>
+    <string name="charts_switch_3d">Cambiar a 3D</string>
+    <string name="charts_switch_2d">Cambiar a 2D</string>
+    <string name="charts_axis_p1">P1: fracción del superávit ahorrado [0–1]</string>
+    <string name="charts_axis_p2">P2: edad de fin de ahorro (años)</string>
+    <string name="charts_axis_p3">P3: fracción del gasto anual de capital [0–1]</string>
+    <string name="charts_axis_p4">P4: edad de inicio de gasto de capital (años)</string>
+    <string name="charts_axis_utility">Utilidad [0–1]</string>
+    <string name="charts_show_contours">Mostrar Contornos</string>
+    <string name="charts_hide_contours">Ocultar Contornos</string>
+    <string name="charts_toggle_perspective">Perspectiva: ON</string>
+    <string name="charts_toggle_orthographic">Perspectiva: OFF</string>
+    <string name="export_pdf">Exportar Informe Completo a PDF</string>
+    <string name="pdf_exported_success">Informe guardado en Documentos: %1$s</string>
+    <string name="pdf_exported_error">Error al generar PDF</string>
+
+    <string name="quick_start_guide">Guía de Inicio Rápido</string>
+    <string name="quick_start_title">Guía de Inicio Rápido</string>
+    <string name="quick_start_step1">1. Configura tu Idioma y Nombre de Perfil.</string>
+    <string name="quick_start_step2">2. Ve a \'Superávit\' para calcular tu capacidad de superávit diario a partir de ingresos y gastos fijos.</string>
+    <string name="quick_start_step3">3. Ve a \'Datos de Usuario\' para ingresar tus detalles personales (Edad, Capital, etc.) y Supuestos Financieros (Tasas, Inflación).</string>
+    <string name="quick_start_step4">4. Usa la pantalla \'Simulación\' (Inicio) para ver resultados. Puedes ajustar manualmente los parámetros P1-P4 o usar \'Optimizar\' para que la IA encuentre la mejor estrategia.</string>
+    <string name="quick_start_step5">5. Revisa \'Gráficos\' para visualizar cómo los parámetros afectan tu función objetivo en 3D.</string>
+    <string name="quick_start_step6">6. Exporta tu plan final a PDF para tus registros.</string>
+    <string name="quick_start_got_it">¡Entendido!</string>
+    <string name="pdf_report_info_title">Información del Informe</string>
+    <string name="pdf_table_header_date">Fecha</string>
+    <string name="pdf_table_header_version">Versión</string>
+    <string name="results_parameters_used">Parámetros Utilizados: P1=%1$.4f, P2=%2$d, P3=%3$.4f, P4=%4$d</string>
+    <string name="simulation_results_title">Resultados de la Simulación</string>
+    <string name="optimizing">Optimizando...</string>
+    <string name="run_optimization">Ejecutar Optimización</string>
+
+    <!-- Compare Profiles Feature -->
+    <string name="compare_profiles">Comparar Perfiles</string>
+    <string name="compare_mode_title">Comparando: %1$s vs %2$s</string>
+    <string name="compare_mode_description">Mostrando valores delta (Perfil 2 - Perfil 1). Las entradas muestran valores del Perfil 1 con deltas en rojo donde sean diferentes.</string>
+    <string name="compare_mode_active">Modo Comparación Activo</string>
+    <string name="exit_compare_mode">Salir del Modo Comparación</string>
+    <string name="select_profiles_to_compare">Selecciona 2 perfiles para comparar</string>
+    <string name="profile_1_label">Perfil 1</string>
+    <string name="profile_2_label">Perfil 2</string>
+    <string name="delta_prefix">Δ</string>
+    <string name="compare_button">Comparar</string>
+    <string name="delta_results_title">Resultados Delta (Perfil 2 - Perfil 1)</string>
+    <string name="optimal_point_p1">Óptimo P1</string>
+    <string name="optimal_point_p2">Óptimo P2</string>
+    <string name="delta_fobj">Δ F(w): %1$+.4f</string>
+    <string name="delta_avg_utility">Δ Utilidad Media: %1$+.4f</string>
+    <string name="delta_std_dev">Δ Desv. Est.: %1$+.4f</string>
+    <string name="delta_stability">Δ Estabilidad: %1$+.4f</string>
+    <string name="charts_toggle_delta_view">Mostrar Delta (ΔZ)</string>
+    <string name="charts_toggle_normal_view">Mostrar Vista Normal</string>
+    <string name="charts_delta_subtitle">Mostrando diferencia entre %1$s y %2$s</string>
+    <string name="charts_delta_p1p2_title">ΔFunción Objetivo (P1/P2)</string>
+    <string name="charts_delta_p3p4_title">ΔFunción Objetivo (P3/P4)</string>
+    <string name="delta_format_positive">(P2: +%1$s)</string>
+    <string name="delta_format_negative">(P2: %1$s)</string>
+    <string name="delta_val_positive">(Δ+%1$s)</string>
+    <string name="delta_val_negative">(Δ%1$s)</string>
+
+    <string name="ai_disclaimer">El contenido generado por IA puede ser inexacto. Verifica la información importante.</string>
+    <string name="ai_message_hidden">Este mensaje se ocultó después de ser reportado.</string>
+    <string name="report_content">Reportar contenido</string>
+    <string name="report_content_desc">Reportar contenido de IA inapropiado</string>
+    <string name="report_confirm_title">¿Reportar esta respuesta de IA?</string>
+    <string name="report_confirm_body">Esto ocultará el mensaje en la app y abrirá tu cliente de correo para enviar un reporte.</string>
+    <string name="report_confirm_action">Reportar</string>
+    <string name="report_email_subject">Reporte de contenido inapropiado (FinancialAwareness)</string>
+    <string name="report_email_body">Me gustaría reportar el siguiente contenido generado por IA:\n\n%1$s\n\nMotivo (opcional):</string>
+    <string name="privacy_policy">Política de privacidad</string>
+
+    <string name="privacy_consent_title">Aviso de privacidad</string>
+    <string name="privacy_consent_body">El texto que ingreses puede enviarse a servidores de IA de terceros (OpenRouter y el proveedor del modelo seleccionado) para generar respuestas. ¿Das tu consentimiento para esta transferencia de datos?</string>
+    <string name="privacy_consent_accept">Doy mi consentimiento</string>
+    <string name="privacy_consent_decline">No, gracias</string>
+    <string name="privacy_consent_required_ai">Se requiere consentimiento de privacidad para usar funciones de IA.</string>
+    <string name="label_objective_function">Función Objetivo</string>
+    <string name="label_average_utility">Utilidad Media</string>
+    <string name="label_std_dev">Desviación Estándar</string>
+    <string name="label_stability_index">Índice de Estabilidad</string>
+    <string name="privacy_policy_url">https://www.example.com/privacy_policy</string>
+</resources>

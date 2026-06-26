@@ -1,0 +1,376 @@
+<resources>
+    <string name="app_name">Personal Financial Awareness</string>
+    <string name="financial_calculator_title">Personal Financial Calculator</string>
+    <string name="reset_inputs">Reset Inputs</string>
+    <string name="manage_profiles">Manage Profiles</string>
+    <string name="surplus_calculation">Calculate Surplus</string>
+    <string name="calculated_daily_surplus">Calculated Daily Surplus:</string>
+    <string name="work_with_mortgage">Work (with mortgage/rent): %1$s</string>
+    <string name="work_without_mortgage">Work (without mortgage/rent): %1$s</string>
+    <string name="pension_with_mortgage">Pension (with mortgage/rent): %1$s</string>
+    <string name="pension_without_mortgage">Pension (without mortgage/rent): %1$s</string>
+    <string name="work_surplus_average">Work (avg with/without mortgage): %1$s</string>
+    <string name="pension_surplus_average">Pension (avg with/without mortgage): %1$s</string>
+    <string name="mortgage_paid_until_age">Mortgage/rent paid until age %1$d</string>
+    <string name="add_edit_one_time_expenses">Add/Edit One-Time Expenses</string>
+    <string name="model_assumptions">Model Assumptions</string>
+    <string name="expected_inheritance">Expected inheritance (€)</string>
+    <string name="capital_to_leave">Capital to leave as inheritance or keep for old age (€)</string>
+    <string name="net_tfr_at_retirement">Net TFR at retirement (€)</string>
+    <string name="annual_interest_rate_on_capital">Annual interest rate on capital (REAL rate, net of inflation, e.g., 0.02)</string>
+    <string name="annual_interest_rate_on_debt">Annual interest rate on debt (e.g., 0.07)</string>
+    <string name="initial_capital_at_current_age">Initial capital at current age (€)</string>
+    <string name="extra_daily_spending_for_utility">Extra daily spending for utility≈0.9 (€)</string>
+    <string name="current_age">Current age (years)</string>
+    <string name="retirement_age">Retirement age (years)</string>
+    <string name="inheritance_reception_age">Inheritance reception age (years)</string>
+    <string name="end_of_horizon_age">End of horizon age (years)</string>
+    <string name="minimum_utility_threshold">Minimum utility threshold (0–1)</string>
+    <string name="constant_utility_weight">Standard Deviation Minimization Weight (0–inf)</string>
+    <string name="optimization_parameters_title">Optimized Variables</string>
+    <string name="optimization_parameters_description">These parameters are both inputs (you can adjust them) and outputs (the optimization algorithm updates them to find the best financial strategy).</string>
+    <string name="p1_surplus_fraction_saved">P1: Fraction of surplus saved (0–1)</string>
+    <string name="p2_end_of_savings_age">P2: Age to stop saving from surplus</string>
+    <string name="p3_annual_capital_spending_share">P3: Annual capital spending share. It represents the fraction of the theoretical (Capital / Remaining Years) quota to spend each year. Example: P3 * (Capital / Remaining Years) is the amount eroded from capital that year.</string>
+    <string name="p4_start_of_capital_spending_age">P4: Age to start spending capital (pre-retirement)</string>
+    <string name="calculate_simulation_with_inputs">Calculate simulation with current inputs</string>
+    <string name="genetic_algorithm_parameters">Genetic Algorithm Parameters</string>
+    <string name="optimize_objective_function">Optimize Objective Function (find best P1-P4)</string>
+    <string name="optimization_in_progress">Optimization in progress…</string>
+    <string name="calculate_parameter_sensitivity">Calculate Parameter Sensitivity</string>
+    <string name="analysis_in_progress">Analysis in progress…</string>
+    <string name="impact_on_objective_function">Impact on Objective Function:</string>
+    <string name="results_parameters_used">Used Parameters: P1=%1$.4f, P2=%2$d, P3=%3$.4f, P4=%4$d</string>
+    <string name="final_objective_function">Final Objective Function: %1$.3f</string>
+    <string name="definition_objective_function">Definition: (AvgUtility + (w/100) * (AvgUtility/StdDev)) / (1 + w/100), w=%1$.2f</string>
+    <string name="definition_std_dev">Definition: Standard Deviation of yearly utility values.</string>
+    <string name="definition_stability_index">Formula: Stability Index = StdDev / (w/100).\n&gt;&gt; 1: Low w, priority on Avg Utility.\n&lt;&lt; 1: High w, priority on Stability.\n~ 1: Balanced.</string>
+    <string name="average_utility">Average Utility: %1$.3f</string>
+    <string name="std_dev">Standard Deviation: %1$.3f</string>
+    <string name="warning_utility_threshold_not_met">Warning: The minimum utility constraint cannot be met while preserving the final capital. Try reducing the minimum utility threshold or the daily spending for max utility.</string>
+    <string name="copyright_notice">Copyright (c) 2025 Giovanni Mauceri. All rights reserved.\nThis application is for personal use only. Unauthorized distribution or commercial use is strictly prohibited.</string>
+    <string name="disclaimer">Disclaimer: This application is for informational purposes only and does not constitute financial advice. The developer is not a financial advisor.</string>
+    <string name="ga_optimization_result">Objective Function (GA): %1$.3f (w=%2$.2f)\nRefined Objective Function: %3$.3f\nP1=%4$.2f P2=%5$d P3=%6$.2f P4=%7$d</string>
+    <string name="sensitivity_calculation_failed">Could not calculate sensitivity (objective is zero or negative).</string>
+    <string name="pdf_report_title">Financial Awareness Simulation Report</string>
+    <string name="pdf_generated_on">Generated on: %1$s</string>
+    <string name="pdf_section_user_financial">User &amp; Financial Data</string>
+    <string name="pdf_section_utility_model">Utility &amp; Model</string>
+    <string name="pdf_section_optimization_params">Optimization Parameters (Used)</string>
+    <string name="pdf_section_results_summary">Results Summary</string>
+    <string name="pdf_section_sensitivity_analysis">Sensitivity Analysis (All Impacts)</string>
+    <string name="pdf_section_ai_comment">AI Agent Analysis &amp; Comments</string>
+    <string name="pdf_section_simulation_details">Simulation Details</string>
+    <string name="pdf_label_age">Current Age: %1$d, Retirement: %2$d, End: %3$d</string>
+    <string name="pdf_label_capital">Initial Capital: %1$s, Target Capital: %2$s</string>
+    <string name="pdf_label_inheritance">Inheritance: %1$s at age %2$d</string>
+    <string name="pdf_label_tfr">Net TFR: %1$s</string>
+    <string name="pdf_label_rates">Capital Rate: %1$s, Debt Rate: %2$s</string>
+    <string name="pdf_label_utility_params">Max Utility Spend: %1$s, Min Threshold: %2$s, Weight (w): %3$s</string>
+    <string name="pdf_label_final_obj">Final Objective Function: %1$s</string>
+    <string name="pdf_label_avg_utility">Average Utility: %1$s</string>
+    <string name="pdf_label_stability">Stability Index: %1$s</string>
+    <string name="pdf_label_final_capital">Final Capital: %1$s</string>
+
+    <!-- Plain labels for PDF Table Parameters -->
+    <string name="label_objective_function">Objective Function</string>
+    <string name="label_average_utility">Average Utility</string>
+    <string name="label_std_dev">Standard Deviation</string>
+    <string name="label_stability_index">Stability Index</string>
+
+    <string name="pdf_table_header_parameter">Parameter</string>
+    <string name="pdf_table_header_value">Value</string>
+    <string name="pdf_table_header_impact">Impact</string>
+    <string name="pdf_table_header_unit">Unit</string>
+    <string name="pdf_table_header_age">Age</string>
+    <string name="pdf_table_header_extra_spend">Extra Spend (€)</string>
+    <string name="pdf_table_header_cap_end">Cap. End Year (€)</string>
+    <string name="pdf_table_header_util">Util</string>
+    <string name="pdf_table_header_debt">Debt (€)</string>
+
+    <string name="nav_simulation">Simulation</string>
+    <string name="nav_surplus">Surplus</string>
+    <string name="nav_charts">Charts</string>
+    <string name="nav_assumptions">Assumptions</string>
+
+    <string name="manage_profiles_title">Manage Profiles</string>
+    <string name="save_current_profile">Save Current Profile</string>
+    <string name="profile_name">Profile Name</string>
+    <string name="save">Save</string>
+    <string name="load_existing_profile">Load Existing Profile</string>
+    <string name="load">Load</string>
+    <string name="close">Close</string>
+    <string name="clear">Clear</string>
+    <string name="confirm_overwrite_title">Overwrite Profile?</string>
+    <string name="confirm_overwrite_message">A profile named "%1$s" already exists. Overwrite it?</string>
+    <string name="overwrite">Overwrite</string>
+    <string name="cancel">Cancel</string>
+    <string name="one_time_expenses_title">One-Time Expenses</string>
+    <string name="one_time_expenses_description">Enter one-time expenses expected at specific ages (e.g., car purchase, wedding, major medical expenses, etc.).\nImportant: Expenses entered here must not be included (even as monthly savings) in the fixed monthly expenses in the surplus calculation screen to avoid double counting. Alternatively, you can ignore this section and \'spread\' these expenses in the \'Other\' field of the previous screen.</string>
+    <string name="age_label_format">Age %1$d</string>
+    <string name="expense_amount_format">Expense %1$d (€)</string>
+    <string name="utility_offset_label">Utility Offset %1$d</string>
+    <string name="reset_expenses">Reset Expenses</string>
+    <string name="save_and_return">Save and Return</string>
+    <string name="daily_surplus_calculator_title">Daily Surplus Calculator</string>
+    <string name="income">Income</string>
+    <string name="working_age">Working Age</string>
+    <string name="monthly_net_salary">Monthly Net Salary (€)</string>
+    <string name="annual_net_bonus">Net Result Bonus (Annual) (€)</string>
+    <string name="annual_13_14">13th/14th Net (Annual) (€)</string>
+    <string name="monthly_personal_bonus">Personal Bonuses (Monthly) (€)</string>
+    <string name="pension">Pension</string>
+    <string name="monthly_net_pension">Monthly Net Pension (€)</string>
+    <string name="other_monthly_income">Other Monthly Income (€)</string>
+    <string name="fixed_expenses_monthly">Fixed Expenses (Monthly)</string>
+    <string name="mortgage_rent">Mortgage or Rent (€)</string>
+    <string name="until_age">Until Age</string>
+    <string name="sort_expenses">Sort Expenses</string>
+    <string name="sort_age">Sort Age</string>
+    <string name="sort_amount">Sort Amount</string>
+    <string name="sort_utility">Sort Utility</string>
+    <string name="condo_fees">Condo (€)</string>
+    <string name="utilities_bills">Utilities (€)</string>
+    <string name="food">Food (€)</string>
+    <string name="vehicles">Vehicles (€)</string>
+    <string name="gym">Gym (€)</string>
+    <string name="transport_travel">Transport/Travel (€)</string>
+    <string name="health">Health (€)</string>
+    <string name="vacations">Vacations (€)</string>
+    <string name="shopping">Shopping (€)</string>
+    <string name="other">Other (€)</string>
+    <string name="results">Results</string>
+    <string name="monthly_totals">Monthly Totals:</string>
+    <string name="work_totals_format">Work: Income %1$s / Expenses %2$s (without mortgage/rent) - %3$s (with mortgage/rent)</string>
+    <string name="pension_totals_format">Pension: Income %1$s / Expenses %2$s (without mortgage/rent) - %3$s (with mortgage/rent)</string>
+    <string name="calculated_daily_surplus_title">Calculated Daily Surplus:</string>
+    <string name="table_age">Age</string>
+    <string name="table_extra_spending">Extra €/d</string>
+    <string name="table_capital_end_year">Cap. End (€)</string>
+    <string name="table_savings_ratio">%% Save</string>
+    <string name="table_utility">Util. [0-1]</string>
+    <string name="table_debt_repayment">Repay (€)</string>
+    <string name="table_debt_balance">Debt Bal. (€)</string>
+    <string name="table_capital_gained">Gained (k€)</string>
+    <string name="table_parameter">PARAMETER</string>
+    <string name="table_impact">IMPACT</string>
+    <string name="ga_params_title">Optimization Algorithm Parameters</string>
+    <string name="ga_params_group_title">Genetic Algorithm Parameters (leave as is if unsure)</string>
+    <string name="initial_population">Initial Population</string>
+    <string name="num_generations">Number of Generations</string>
+    <string name="crossover_probability">Crossover Probability (0–1)</string>
+    <string name="mutation_probability">Mutation Probability (0–1)</string>
+    <string name="min_range_p">Min Range P (p1;p2;p3;p4) [use \';\']</string>
+    <string name="max_range_p">Max Range P (p1;p2;p3;p4) [use \';\']</string>
+    <string name="optimization_goal">Goal: 1=Maximize, 0=Minimize</string>
+    <string name="assumptions_title">Model Assumptions</string>
+    <string name="assumptions_reset_defaults">Reset to Defaults</string>
+    <string name="utility_function_title">Utility Function</string>
+    <string name="utility_function_desc">Utility is a measure of satisfaction derived from extra daily spending. It is modeled as a sigmoid function, which grows rapidly at first and then stabilizes, with a maximum value ranging from 0 to 1.</string>
+    <string name="utility_example_title">Example trend (age 40):</string>
+    <string name="utility_example_format">Extra Daily Spending: €%1$d, Utility: %2$.3f</string>
+    <string name="age_degradation_title">Age Degradation</string>
+    <string name="age_degradation_desc">It is assumed that the ability to enjoy spending (and thus utility) decreases with age, especially after 55.</string>
+    <string name="degradation_example_title">Degradation factor trend example:</string>
+    <string name="degradation_example_format">Age: %1$d, Degradation Factor: %2$.3f</string>
+    <string name="assumptions_chart_utility_title">Utility vs Extra Daily Spending</string>
+    <string name="assumptions_chart_spending_x">Extra daily spending (€)</string>
+    <string name="assumptions_chart_utility_y">Utility [0–1]</string>
+    <string name="assumptions_chart_trace_utility">Utility</string>
+    <string name="assumptions_chart_degradation_title">Age Degradation Factor</string>
+    <string name="assumptions_chart_age_x">Age (years)</string>
+    <string name="assumptions_chart_degradation_y">Degradation factor</string>
+    <string name="assumptions_chart_trace_degradation">Degradation</string>
+    <string name="go_back">Go Back</string>
+    <string name="optimization_parameters_group">Optimization Parameters</string>
+    
+    <!-- Sensitivity Analysis Strings -->
+    <string name="sens_p1">P1 Saving Ratio</string>
+    <string name="sens_p2">P2 End Savings Age</string>
+    <string name="sens_p3">P3 Capital Spending Share</string>
+    <string name="sens_p4">P4 Capital Spending Start</string>
+    <string name="sens_inheritance">Inheritance</string>
+    <string name="sens_keep">Capital to Keep</string>
+    <string name="sens_tfr">Net TFR</string>
+    <string name="sens_initial_cap">Initial Capital</string>
+    <string name="sens_int_rate">Interest Rate</string>
+    <string name="sens_debt_rate">Debt Interest Rate</string>
+    <string name="sens_utility_threshold">Utility Threshold</string>
+    <string name="sens_max_spending">Max Utility Spending</string>
+    <string name="sens_bonus_weight">Bonus Weight (w)</string>
+    <string name="sens_surplus">Daily Surplus</string>
+    
+    <string name="unit_pt_10">pt / 10%</string>
+    <string name="unit_pt_year">pt / year</string>
+    <string name="unit_pt_10k">pt / 10k€</string>
+    <string name="unit_pt_1pp">pt / 1pp</string>
+    <string name="unit_pt_001">pt / 0.01</string>
+    <string name="unit_pt_100eur">pt / 100€ month</string>
+    <string name="unit_pt_01">pt / 0.1</string>
+    <string name="select_language">Language</string>
+
+    <string name="user_data_title">User Data</string>
+    <string name="user_data_button">User Data</string>
+    <string name="section_personal_data">Personal Data</string>
+    <string name="section_financial_data">Financial Data</string>
+    <string name="section_rates">Interest Rates</string>
+    <string name="section_utility_params">Utility Parameters</string>
+
+    <string name="section_data_input">1. Data Input &amp; Setup</string>
+    <string name="section_optimization_config">2. Optimization Configuration</string>
+    <string name="section_analysis_actions">3. Analysis &amp; Actions</string>
+    <string name="section_utilities">4. Utilities &amp; Management</string>
+    <string name="simulation_results_title">Simulation Results</string>
+    <string name="optimizing">Optimizing...</string>
+    <string name="run_optimization">Run Optimization</string>
+    <string name="open_charts">View Results Charts</string>
+    <string name="charts_title">Charts</string>
+    <string name="charts_loading">Generating surfaces…</string>
+    <string name="charts_subtitle">Surfaces show objective with/without w (w=%1$.2f)</string>
+    <string name="charts_fixed_values_p3p4">Fixed: P3=%1$.4f P4=%2$d</string>
+    <string name="charts_fixed_values_p1p2">Fixed: P1=%1$.4f P2=%2$d</string>
+    <string name="charts_p1p2_title">Surface 1: X=P1, Y=P2</string>
+    <string name="charts_p3p4_title">Surface 2: X=P3, Y=P4</string>
+    <string name="charts_invalid_range_p2">Invalid P2 range [%1$d..%2$d] (P2 must be &lt;= P4=%3$d)</string>
+    <string name="charts_invalid_range_p4">Invalid P4 range [%1$d..%2$d] (P4 must be &gt;= P2=%3$d)</string>
+    <string name="charts_plotly_failed">Plotly failed to load. Check Internet connectivity.</string>
+
+    <string name="charts_objective">fobj</string>
+    <string name="charts_2d_heatmap_cpu">2D Heatmap (CPU Rendering)</string>
+    <string name="charts_received_data">Received Data...</string>
+    <string name="charts_fallback_2d">Fallback 2D Heatmap (WebGL Failed)</string>
+    <string name="charts_webview_active">WebView Active - Waiting JS...</string>
+    <string name="charts_save_image">Save Image</string>
+    <string name="charts_reset_scale">Reset Scale</string>
+    
+    <string name="charts_interactive_weight">Standard Deviation Minimization Weight (w): %1$.2f</string>
+    <string name="charts_optimizing_params">Optimizing parameters…</string>
+    <string name="charts_optimal_f_results">Optimal F(w)=%1$.3f | F(0)=%2$.3f</string>
+    <string name="charts_stability_index_value">Stability Index: %1$.2f (1 means balanced optimization between fobj and small std dev)</string>
+    <string name="charts_fobj_formula">fobj = (AvgUtil + (w/100) * (AvgUtil / StdDev)) / (1 + w/100)</string>
+    <string name="charts_switch_3d">Switch to 3D Surface</string>
+    <string name="charts_switch_2d">Switch to 2D Heatmap</string>
+    <string name="charts_toggle_perspective">Perspective: ON</string>
+    <string name="charts_toggle_orthographic">Perspective: OFF</string>
+    
+    <string name="charts_axis_p1">P1: saved surplus share [0–1]</string>
+    <string name="charts_axis_p2">P2: end savings age (years)</string>
+    <string name="charts_axis_p3">P3: annual capital spending share [0–1]</string>
+    <string name="charts_axis_p4">P4: capital spending start age (years)</string>
+    <string name="charts_axis_utility">Utility [0–1]</string>
+    <string name="charts_show_contours">Show Contours</string>
+    <string name="charts_hide_contours">Hide Contours</string>
+
+    <string name="open_debug_log">Debug Log</string>
+    <string name="debug_log_title">Debug Log</string>
+    <string name="copy">Copy</string>
+    <string name="export_pdf">Export Full Report to PDF</string>
+    <string name="pdf_exported_success">Report saved to Documents: %1$s</string>
+    <string name="pdf_exported_error">Failed to generate PDF</string>
+
+    <string name="quick_start_guide">Quick Start Guide</string>
+    <string name="quick_start_title">Quick Start Guide</string>
+    <string name="quick_start_step1">1. Set your Language and Profile Name.</string>
+    <string name="quick_start_step2">2. Go to \'Surplus\' to calculate your daily surplus capacity from income and fixed expenses.</string>
+    <string name="quick_start_step3">3. Go to \'User Data\' to enter your personal details (Age, Capital, etc.) and Financial Assumptions (Rates, Inflation).</string>
+    <string name="got_it">Got it!</string>
+    
+    <string name="about_app">About App</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    
+    <!-- PDF Export -->
+    <string name="pdf_updating">Updating simulation data...</string>
+    <string name="pdf_simulation_failed">Simulation failed. Cannot export.</string>
+    <string name="pdf_generating_ai">Generating AI Market Research &amp; Analysis...</string>
+    <string name="pdf_no_viewer">No PDF viewer found. File saved to Documents.</string>
+    <string name="market_data_unavailable">Market data unavailable (Network Error).</string>
+    <string name="back">Back</string>
+    <string name="chart_p1_current">P1 (Current)</string>
+    <string name="chart_p2_optimal">P2 (Optimal)</string>
+    <string name="chart_p2_on_p1">P2 (on P1)</string>
+    <string name="chart_trace_p1">P1</string>
+    <string name="chart_trace_p2">P2</string>
+
+    <string name="quick_start_step4">4. Use the \'Simulation\' screen (Main) to see results. You can manually adjust parameters P1-P4 or use \'Optimize\' to let the AI find the best strategy.</string>
+    <string name="quick_start_step5">5. Check \'Charts\' to visualize how parameters affect your objective function in 3D.</string>
+    <string name="quick_start_step6">6. Export your final plan to PDF for your records.</string>
+    <string name="quick_start_got_it">Got it!</string>
+    <string name="pdf_report_info_title">Report Information</string>
+    <string name="pdf_table_header_date">Date</string>
+    <string name="pdf_table_header_version">Version</string>
+
+    <!-- Compare Profiles Feature -->
+    <string name="compare_profiles">Compare Profiles</string>
+    <string name="compare_mode_title">Comparing: %1$s vs %2$s</string>
+    <string name="compare_mode_description">Showing delta values (Profile 2 - Profile 1). Inputs show Profile 1 values with red deltas where different.</string>
+    <string name="compare_mode_active">Compare Mode Active</string>
+    <string name="exit_compare_mode">Exit Compare Mode</string>
+    <string name="select_profiles_to_compare">Select 2 profiles to compare</string>
+    <string name="profile_1_label">Profile 1</string>
+    <string name="profile_2_label">Profile 2</string>
+    <string name="delta_prefix">Δ</string>
+
+    <!-- About Screen -->
+    <string name="about_title">About</string>
+    <string name="privacy_section">Privacy &amp; Data</string>
+    
+    <string name="compare_button">Compare</string>
+    <string name="delta_results_title">Delta Results (Profile 2 - Profile 1)</string>
+    <string name="optimal_point_p1">Optimal P1</string>
+    <string name="optimal_point_p2">Optimal P2</string>
+    <string name="delta_fobj">Δ F(w): %1$+.4f</string>
+    <string name="delta_avg_utility">Δ Avg Utility: %1$+.4f</string>
+    <string name="delta_std_dev">Δ Std Dev: %1$+.4f</string>
+    <string name="delta_stability">Δ Stability: %1$+.4f</string>
+    <string name="charts_toggle_delta_view">Show Delta (ΔZ)</string>
+    <string name="charts_toggle_normal_view">Show Normal View</string>
+    <string name="charts_delta_subtitle">Showing difference between %1$s and %2$s</string>
+    <string name="charts_delta_p1p2_title">ΔObjective Function (P1/P2)</string>
+    <string name="charts_delta_p3p4_title">ΔObjective Function (P3/P4)</string>
+    <string name="delta_format_positive">(P2: +%1$s)</string>
+    <string name="delta_format_negative">(P2: %1$s)</string>
+    <string name="delta_val_positive">(Δ+%1$s)</string>
+    <string name="delta_val_negative">(Δ%1$s)</string>
+    <string name="delta_surplus_positive">Δ +%1$s</string>
+    <string name="delta_surplus_negative">Δ %1$s</string>
+
+    <!-- AI Compliance & Reporting -->
+    <string name="ai_disclaimer">AI-generated content may be inaccurate. Verify important information.</string>
+    <string name="ai_message_hidden">This message was hidden after being reported.</string>
+    <string name="report_content">Report Content</string>
+    <string name="report_content_desc">Report inappropriate AI content</string>
+    <string name="report_confirm_title">Report this AI response?</string>
+    <string name="report_confirm_body">This will hide the message in the app and open your email client to send a report.</string>
+    <string name="report_confirm_action">Report</string>
+    <string name="report_email_subject">Report Inappropriate Content (FinancialAwareness)</string>
+    <string name="report_email_body">I would like to report the following AI-generated content:\n\n%1$s\n\nReason (optional):</string>
+
+    <string name="privacy_consent_title">Privacy notice</string>
+    <string name="privacy_consent_body">Text you enter may be sent to third-party AI servers (OpenRouter and the selected model provider) to generate responses. Do you consent to this data transfer?</string>
+    <string name="privacy_consent_accept">I consent</string>
+    <string name="privacy_consent_decline">No, thanks</string>
+    <string name="privacy_consent_required_ai">Privacy consent is required to use AI features.</string>
+    
+    <!-- Added Navigation -->
+    <string name="nav_setup">Setup</string>
+    <string name="nav_ai_agent">AI Agent</string>
+
+    <!-- Added Agent Screen -->
+    <string name="agent_chat_history">Chat History</string>
+    <string name="agent_new_chat">New Chat</string>
+    <string name="agent_privacy_not_configured">Privacy Policy URL not configured.</string>
+    <string name="agent_title">Financial AI Agent</string>
+    <string name="agent_start_message">Start a new chat or select one from the menu.</string>
+    <string name="agent_settings">Settings</string>
+    <string name="agent_menu">Menu</string>
+    <string name="delete">Delete</string>
+    <string name="agent_ask_placeholder">Ask the AI...</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+    <string name="agent_settings_title">AI Settings</string>
+    <string name="agent_api_key_label">OpenRouter API Key</string>
+    <string name="agent_get_key_at">Get your key at </string>
+    <string name="agent_model_id_label">Model ID</string>
+    <string name="agent_see_models_at">See available models at </string>
+    <string name="agent_you">You</string>
+    <string name="agent_ai">AI Agent</string>
+</resources>

@@ -1,0 +1,636 @@
+package com.example.daysurpopt.ui.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.example.daysurpopt.R
+import com.example.daysurpopt.data.LanguageRepository
+import com.example.daysurpopt.domain.ObjectiveResults
+import com.example.daysurpopt.domain.SimulationYear
+import com.example.daysurpopt.ui.tables.SimulationResultTable
+import com.example.daysurpopt.ui.dialogs.ProfilesDialog
+import com.example.daysurpopt.ui.theme.NegativeDelta
+import com.example.daysurpopt.ui.theme.PositiveDelta
+import java.util.Locale
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FinancialCalculatorScreen(
+    navController: NavController,
+    viewModel: FinancialViewModel
+) {
+    val context = LocalContext.current
+    var showProfilesDialog by remember { mutableStateOf(false) }
+
+    if (showProfilesDialog) {
+        LaunchedEffect(Unit) { viewModel.fetchProfileNames() }
+        ProfilesDialog(
+            onDismiss = { showProfilesDialog = false },
+            onLoadProfile = { name ->
+                viewModel.loadProfileByName(name)
+                showProfilesDialog = false
+            },
+            onSaveProfile = { name ->
+                viewModel.saveProfile(name)
+                showProfilesDialog = false
+            },
+            existingProfiles = viewModel.profileNames.value,
+            onDeleteProfile = { name -> viewModel.deleteProfile(name) },
+            onCompareProfiles = { p1, p2 ->
+                viewModel.enterCompareMode(p1, p2)
+                showProfilesDialog = false
+            },
+            isComparing = viewModel.compareState.isComparing,
+            onExitCompare = {
+                viewModel.exitCompareMode()
+            }
+        )
+    }
+
+    FinancialCalculatorContent(
+        isComparing = viewModel.compareState.isComparing,
+        profile1Name = viewModel.compareState.profile1Name,
+        profile2Name = viewModel.compareState.profile2Name,
+        optimizing = viewModel.optimizing,
+        objectiveFunctionValue = viewModel.objectiveFunctionValue,
+        optimizationResult = viewModel.optimizationResult,
+        objectiveResults = viewModel.objectiveResults,
+        deltaObjectiveResults = viewModel.deltaObjectiveResults,
+        simulationResults = viewModel.simulationResults,
+        profile2SimulationResults = viewModel.profile2SimulationResults,
+        sensitivityResults = viewModel.sensitivityResults,
+        deltaSensitivityResults = viewModel.deltaSensitivityResults,
+        sensitivityMessageResId = viewModel.sensitivityMessageResId,
+        inputs = viewModel.inputs,
+        onManageProfilesClick = { showProfilesDialog = true },
+        onNavigate = { route -> navController.navigate(route) },
+        onRunOptimization = { viewModel.runOptimization() },
+        onRunSimulation = { viewModel.runSimulation() },
+        onRunSensitivityAnalysis = { viewModel.runSensitivityAnalysis() },
+        onExportPdf = { viewModel.exportPdf(context) },
+        onExitCompareMode = { viewModel.exitCompareMode() },
+        onLanguageChange = { lang ->
+            LanguageRepository.saveLanguage(context, lang)
+            (context as? android.app.Activity)?.recreate()
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FinancialCalculatorContent(
+    isComparing: Boolean,
+    profile1Name: String?,
+    profile2Name: String?,
+    optimizing: Boolean,
+    objectiveFunctionValue: Double?,
+    optimizationResult: OptimizationResult?,
+    objectiveResults: ObjectiveResults?,
+    deltaObjectiveResults: com.example.daysurpopt.domain.DeltaObjectiveResults?,
+    simulationResults: List<SimulationYear>,
+    profile2SimulationResults: List<SimulationYear>?,
+    sensitivityResults: List<com.example.daysurpopt.domain.SensitivityResult>?,
+    deltaSensitivityResults: List<com.example.daysurpopt.domain.DeltaSensitivityResult>?,
+    sensitivityMessageResId: Int?,
+    inputs: com.example.daysurpopt.domain.FinancialInput,
+    onManageProfilesClick: () -> Unit,
+    onNavigate: (String) -> Unit,
+    onRunOptimization: () -> Unit,
+    onRunSimulation: () -> Unit,
+    onRunSensitivityAnalysis: () -> Unit,
+    onExportPdf: () -> Unit,
+    onExitCompareMode: () -> Unit,
+    onLanguageChange: (String) -> Unit
+) {
+    val scrollState = rememberScrollState()
+    var showLanguageMenu by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.financial_calculator_title)) },
+                actions = {
+                    IconButton(onClick = { showLanguageMenu = true }) {
+                        Icon(Icons.Default.Info, contentDescription = stringResource(R.string.select_language))
+                    }
+                    DropdownMenu(
+                        expanded = showLanguageMenu,
+                        onDismissRequest = { showLanguageMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("English") },
+                            onClick = {
+                                onLanguageChange("en")
+                                showLanguageMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Italiano") },
+                            onClick = {
+                                onLanguageChange("it")
+                                showLanguageMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Español") },
+                            onClick = {
+                                onLanguageChange("es")
+                                showLanguageMenu = false
+                            }
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Compare Mode Banner
+            if (isComparing) {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = stringResource(
+                                R.string.compare_mode_title,
+                                profile1Name ?: "",
+                                profile2Name ?: ""
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.compare_mode_description),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onExitCompareMode,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        ) {
+                            Text(stringResource(R.string.exit_compare_mode))
+                        }
+                    }
+                }
+            }
+            
+            // Section 0: Profile Management
+            MainSectionCard(title = stringResource(R.string.manage_profiles_title)) {
+                MenuButton(
+                    onClick = onManageProfilesClick,
+                    text = stringResource(R.string.manage_profiles)
+                )
+            }
+
+            // Section 1: Data Input & Setup
+            MainSectionCard(title = stringResource(R.string.section_data_input)) {
+                MenuButton(
+                    onClick = { onNavigate("surplusCalculator") },
+                    text = stringResource(R.string.surplus_calculation)
+                )
+                MenuButton(
+                    onClick = { onNavigate("userData") },
+                    text = stringResource(R.string.user_data_button)
+                )
+                MenuButton(
+                    onClick = { onNavigate("specificExpenses") },
+                    text = stringResource(R.string.add_edit_one_time_expenses)
+                )
+            }
+
+            // Section 2: Optimization Configuration
+            MainSectionCard(title = stringResource(R.string.section_optimization_config)) {
+
+                MenuButton(
+                    onClick = { onNavigate("assumptions") },
+                    text = stringResource(R.string.model_assumptions)
+                )
+                MenuButton(
+                    onClick = { onNavigate("gaConfig") },
+                    text = stringResource(R.string.genetic_algorithm_parameters)
+                )
+            }
+
+            // Section 3: Analysis & Actions
+            MainSectionCard(title = stringResource(R.string.section_analysis_actions)) {
+
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Button(
+                    onClick = onRunOptimization,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !optimizing
+                ) {
+                    if (optimizing) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.optimizing))
+                    } else {
+                        Text(stringResource(R.string.run_optimization))
+                    }
+                }
+
+                MenuButton(
+                    onClick = { onNavigate("optimizationParams") },
+                    text = stringResource(R.string.optimization_parameters_title)
+                )
+                
+                OutlinedButton(
+                    onClick = onRunSimulation,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !optimizing
+                ) {
+                    Text(stringResource(R.string.calculate_simulation_with_inputs))
+                }
+
+                MenuButton(
+                    onClick = { onNavigate("charts") },
+                    text = stringResource(R.string.open_charts)
+                )
+                
+                OutlinedButton(
+                    onClick = onRunSensitivityAnalysis,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !optimizing
+                ) {
+                    Text(stringResource(R.string.calculate_parameter_sensitivity))
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Consolidated Results Section
+                if (objectiveFunctionValue != null || optimizationResult != null) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = if (isComparing) 
+                                MaterialTheme.colorScheme.surfaceVariant
+                            else MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Title - show delta title in compare mode
+                            if (isComparing) {
+                                Text(
+                                    text = stringResource(R.string.delta_results_title),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(R.string.results),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+
+                            optimizationResult?.let { res ->
+                                Text(
+                                    text = stringResource(R.string.ga_optimization_result, 
+                                        res.gaFitness, res.bonusWeight, res.finalFitness, 
+                                        res.p1, res.p2, res.p3, res.p4),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f))
+                            }
+
+                            objectiveResults?.let { results ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.final_objective_function, results.fObjW),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        // Delta for fobj
+                                        if (isComparing && deltaObjectiveResults != null) {
+                                            val d = deltaObjectiveResults.deltaFObjW
+                                            val color = if (d > 0.0001) PositiveDelta else if (d < -0.0001) NegativeDelta else Color.Unspecified
+                                            Text(
+                                                text = if (d >= 0) stringResource(R.string.delta_format_positive, String.format(Locale.US, "%.4f", d)) else stringResource(R.string.delta_format_negative, String.format(Locale.US, "%.4f", d)),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                color = color
+                                            )
+                                        }
+                                    }
+
+                                Text(
+                                    text = stringResource(R.string.definition_objective_function, inputs.bonusStdWeight),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+
+                                // Average Utility
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(
+                                        text = stringResource(R.string.average_utility, 0.0).substringBefore(":"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Row {
+                                        Text(
+                                            text = String.format(Locale.getDefault(), "%.4f", results.avgUtilita),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        if (isComparing && deltaObjectiveResults != null) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            val d = deltaObjectiveResults.deltaAvgUtilita
+                                            Text(
+                                                text = if (d >= 0) stringResource(R.string.delta_val_positive, String.format(Locale.US, "%.4f", d)) else stringResource(R.string.delta_val_negative, String.format(Locale.US, "%.4f", d)),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                color = if (d >= 0) PositiveDelta else NegativeDelta
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Standard Deviation
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(
+                                        text = stringResource(R.string.std_dev, 0.0).substringBefore(":"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Row {
+                                        Text(
+                                            text = String.format(Locale.getDefault(), "%.4f", results.stdDev),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        if (isComparing && deltaObjectiveResults != null) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            val d = deltaObjectiveResults.deltaStdDev
+                                            Text(
+                                                text = if (d >= 0) stringResource(R.string.delta_val_positive, String.format(Locale.US, "%.4f", d)) else stringResource(R.string.delta_val_negative, String.format(Locale.US, "%.4f", d)),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                color = if (d < -0.0001) PositiveDelta else if (d > 0.0001) NegativeDelta else Color.Gray
+                                            )
+                                        }
+                                    }
+                                }
+                                Text(
+                                    text = stringResource(R.string.definition_std_dev),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+
+                                // Stability Index
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(
+                                        text = stringResource(R.string.charts_stability_index_value, 0.0).substringBefore(":"),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Row {
+                                        Text(
+                                            text = String.format(Locale.getDefault(), "%.4f", results.stabilityIndex),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        if (isComparing && deltaObjectiveResults != null) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            val d = deltaObjectiveResults.deltaStabilityIndex
+                                            Text(
+                                                text = if (d >= 0) stringResource(R.string.delta_val_positive, String.format(Locale.US, "%.4f", d)) else stringResource(R.string.delta_val_negative, String.format(Locale.US, "%.4f", d)),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                color = if (d < -0.0001) PositiveDelta else if (d > 0.0001) NegativeDelta else Color.Gray
+                                            )
+                                        }
+                                    }
+                                }
+                                Text(
+                                    text = stringResource(R.string.definition_stability_index),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                if (optimizationResult == null) {
+                                    Text(
+                                        text = stringResource(R.string.results_parameters_used,
+                                            inputs.p1SavingRatioSurplus,
+                                            inputs.p2EtaFineRisparmioNoCapitale,
+                                            inputs.p3PercentualeCapitaleDaSpendereAnnualmente,
+                                            inputs.p4EtaAnticipataInizioSpesaCapitale
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                if (simulationResults.isNotEmpty()) {
+                                    OutlinedButton(
+                                        onClick = onExportPdf,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                                        )
+                                    ) {
+                                        Text(stringResource(R.string.export_pdf))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Section 4: Simulation Results
+            if (simulationResults.isNotEmpty()) {
+                MainSectionCard(title = stringResource(R.string.simulation_results_title)) {
+                    SimulationResultTable(
+                        results = simulationResults,
+                        isCompareMode = isComparing,
+                        profile2Results = profile2SimulationResults ?: emptyList()
+                    )
+                }
+            }
+            
+            // Sensitivity Results
+            sensitivityResults?.let { results ->
+                MainSectionCard(title = stringResource(R.string.calculate_parameter_sensitivity)) {
+                    com.example.daysurpopt.ui.tables.SensitivityAnalysisTable(
+                        results = results,
+                        isCompareMode = isComparing,
+                        deltaResults = deltaSensitivityResults ?: emptyList()
+                    )
+                }
+            }
+            
+            sensitivityMessageResId?.let { resId ->
+                Text(
+                    text = stringResource(resId),
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            // App Info Section
+            MainSectionCard(title = stringResource(R.string.about_title)) {
+                MenuButton(
+                    onClick = { onNavigate("about") },
+                    text = stringResource(R.string.about_title)
+                )
+            }
+
+            // Footer disclaimer
+            Text(
+                text = stringResource(R.string.disclaimer),
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.outline
+            )
+            
+            Text(
+                text = stringResource(R.string.copyright_notice),
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainSectionCard(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            content()
+        }
+    }
+}
+
+@Composable
+private fun MenuButton(
+    onClick: () -> Unit,
+    text: String,
+    enabled: Boolean = true
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun FinancialCalculatorPreview() {
+    FinancialCalculatorContent(
+        isComparing = false,
+        profile1Name = "User",
+        profile2Name = null,
+        optimizing = false,
+        objectiveFunctionValue = 0.5,
+        optimizationResult = null,
+        objectiveResults = ObjectiveResults(0.5, 0.4, 0.8, 0.1, 0.6),
+        deltaObjectiveResults = null,
+        simulationResults = emptyList(),
+        profile2SimulationResults = null,
+        sensitivityResults = null,
+        deltaSensitivityResults = null,
+        sensitivityMessageResId = null,
+        inputs = com.example.daysurpopt.domain.FinancialInput(),
+        onManageProfilesClick = {},
+        onNavigate = {},
+        onRunOptimization = {},
+        onRunSimulation = {},
+        onRunSensitivityAnalysis = {},
+        onExportPdf = {},
+        onExitCompareMode = {},
+        onLanguageChange = {}
+    )
+}
