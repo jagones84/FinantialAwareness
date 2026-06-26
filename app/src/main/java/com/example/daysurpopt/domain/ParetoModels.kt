@@ -9,7 +9,6 @@ data class ParetoPoint(
     val legacyGap: Double,
     val normalizedUtilityLoss: Double = 0.0,
     val normalizedStabilityLoss: Double = 0.0,
-    val compromiseScore: Double? = null,
     val kneeScore: Double? = null,
     val rank: Int = 0,
     val crowdingDistance: Double = 0.0
@@ -31,12 +30,42 @@ data class ParetoPoint(
 
 data class ParetoFrontResult(
     val points: List<ParetoPoint>,
-    val selectedCompromise: ParetoPoint? = null,
+    val referencePoint: ParetoPoint? = null,
     val idealAvgUtility: Double = 0.0,
     val idealStdDevUtility: Double = 0.0
 )
 
+data class OptimizationMarkerSnapshot(
+    val mode: OptimizationMode,
+    val params: ParamsCandidate,
+    val objectiveValue: Double,
+    val avgUtility: Double,
+    val stdDevUtility: Double,
+    val stabilityIndex: Double,
+    val weightUsed: Double,
+    val kneeScore: Double? = null
+)
+
+fun ParetoPoint.toOptimizationMarkerSnapshot(
+    mode: OptimizationMode,
+    objectiveValue: Double,
+    stabilityIndex: Double,
+    weightUsed: Double
+): OptimizationMarkerSnapshot {
+    return OptimizationMarkerSnapshot(
+        mode = mode,
+        params = params,
+        objectiveValue = objectiveValue,
+        avgUtility = avgUtility,
+        stdDevUtility = stdDevUtility,
+        stabilityIndex = stabilityIndex,
+        weightUsed = weightUsed,
+        kneeScore = kneeScore
+    )
+}
+
 enum class OptimizationMode {
-    BEST_COMPROMISE,
+    TRUE_SCALAR,
+    PARETO_KNEE,
     PARETO_FRONT
 }

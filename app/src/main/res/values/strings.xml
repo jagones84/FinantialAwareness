@@ -184,18 +184,23 @@
     <string name="go_back">Go Back</string>
     <string name="optimization_parameters_group">Optimization Parameters</string>
     <string name="optimization_mode_title">Optimization Mode</string>
-    <string name="optimization_mode_best_compromise">Best Compromise</string>
+    <string name="optimization_mode_true_scalar">True Scalar</string>
+    <string name="optimization_mode_pareto_knee">Pareto Knee</string>
     <string name="optimization_mode_pareto_front">Pareto Front</string>
-    <string name="optimization_mode_best_compromise_desc">Automatically applies one balanced Pareto-optimal plan.</string>
-    <string name="optimization_mode_pareto_front_desc">Computes the full non-dominated feasible set without overwriting current parameters.</string>
-    <string name="optimization_mode_best_compromise_definition">Selection rule: choose the Pareto-optimal plan closest to the normalized ideal point using an augmented ASF.</string>
-    <string name="optimization_mode_pareto_front_definition">Pareto rule: keep all feasible non-dominated plans maximizing Avg Utility and minimizing Std Dev.</string>
-    <string name="optimization_mode_compromise_summary">Best compromise selected from %1$d Pareto points.\nCompromise score: %2$.4f\nApplied params: P1=%3$.4f P2=%4$d P3=%5$.4f P4=%6$d</string>
+    <string name="optimization_mode_true_scalar_desc">Directly optimizes the scalar objective fobj over P1-P4 and applies the result.</string>
+    <string name="optimization_mode_pareto_knee_desc">Automatically applies the knee point of the Pareto front, independent of w.</string>
+    <string name="optimization_mode_pareto_front_desc">Computes the full non-dominated feasible set and applies the current Pareto knee reference plan.</string>
+    <string name="optimization_mode_true_scalar_definition">Scalar rule: directly maximize the current fobj over feasible P1-P4 for the selected w.</string>
+    <string name="optimization_mode_pareto_knee_definition">Selection rule: choose the Pareto knee, i.e. the front point farthest from the chord connecting the two objective-space extremes after normalization.</string>
+    <string name="optimization_mode_pareto_front_definition">Pareto rule: keep all feasible non-dominated plans maximizing Avg Utility and minimizing Std Dev, then use the knee point as the default reference plan.</string>
+    <string name="optimization_mode_true_scalar_summary">True scalar optimum applied.\nParams: P1=%1$.4f P2=%2$d P3=%3$.4f P4=%4$d\nScalar score F(w): %5$.4f | w=%6$.2f</string>
+    <string name="optimization_mode_pareto_knee_summary">Pareto knee selected from %1$d Pareto points.\nKnee score: %2$.4f\nApplied params: P1=%3$.4f P2=%4$d P3=%5$.4f P4=%6$d</string>
     <string name="optimization_mode_pareto_summary">Pareto front computed with %1$d non-dominated feasible plans.</string>
-    <string name="pareto_reference_compromise">Reference compromise from the front: score %1$.4f | P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
+    <string name="optimization_mode_pareto_summary_applied">Pareto front computed with %1$d non-dominated feasible plans.\nApplied reference plan: P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
+    <string name="pareto_reference_knee">Reference knee from the front: score %1$.4f | P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
     <string name="pareto_front_ideal_summary">Front ideals: Avg Utility %1$.4f | Std Dev %2$.4f</string>
     <string name="pareto_front_points_label">Pareto Front Points</string>
-    <string name="pareto_compromise_score_label">Reference Compromise Score</string>
+    <string name="pareto_knee_score_label">Reference Knee Score</string>
     <string name="result_feasibility">Feasibility</string>
     <string name="result_feasible">Feasible</string>
     <string name="result_infeasible">Infeasible</string>
@@ -262,11 +267,12 @@
     <string name="charts_reset_scale">Reset Scale</string>
     
     <string name="charts_interactive_weight">Standard Deviation Minimization Weight (w): %1$.2f</string>
+    <string name="charts_weight_release_reopt_note">Weight changes update optimization markers when you release the slider.</string>
     <string name="charts_optimizing_params">Optimizing parameters…</string>
     <string name="charts_optimal_f_results">Optimal F(w)=%1$.3f | F(0)=%2$.3f</string>
     <string name="charts_stability_index_value">Stability Index: %1$.2f (1 means balanced optimization between fobj and small std dev)</string>
     <string name="charts_fobj_formula">Scalar exploration formula: fobj = (AvgUtil + (w/100) * (AvgUtil / StdDev)) / (1 + w/100)</string>
-    <string name="charts_best_compromise_summary">Best-compromise mode: selected from %1$d Pareto points | score %2$.4f | AvgUtil %3$.4f | StdDev %4$.4f</string>
+    <string name="charts_pareto_knee_summary">Pareto-knee mode: selected from %1$d Pareto points | score %2$.4f | AvgUtil %3$.4f | StdDev %4$.4f</string>
     <string name="charts_pareto_front_summary">Pareto-front mode: %1$d feasible non-dominated plans | ideal AvgUtil %2$.4f | ideal StdDev %3$.4f</string>
     <string name="charts_switch_3d">Switch to 3D Surface</string>
     <string name="charts_switch_2d">Switch to 2D Heatmap</string>
@@ -308,6 +314,25 @@
     <string name="chart_p1_current">P1 (Current)</string>
     <string name="chart_p2_optimal">P2 (Optimal)</string>
     <string name="chart_p2_on_p1">P2 (on P1)</string>
+    <string name="chart_marker_current_inputs">Current Inputs</string>
+    <string name="chart_marker_true_scalar">True Scalar</string>
+    <string name="chart_marker_pareto_knee">Pareto Knee</string>
+    <string name="chart_marker_pareto_reference">Pareto Reference</string>
+    <string name="pareto_chart_title">Pareto Front Explorer</string>
+    <string name="pareto_chart_subtitle">Inspect the feasible trade-off frontier in objective space. Click a point to inspect it, then apply it explicitly if desired.</string>
+    <string name="pareto_apply_selected">Apply selected Pareto point</string>
+    <string name="pareto_reset_selection">Reset selection to reference</string>
+    <string name="pareto_trace_front">Pareto Front</string>
+    <string name="pareto_trace_reference">Reference</string>
+    <string name="pareto_trace_applied">Applied</string>
+    <string name="pareto_trace_selected">Selected</string>
+    <string name="pareto_axis_stddev">Std Dev Utility</string>
+    <string name="pareto_axis_avg_utility">Average Utility</string>
+    <string name="pareto_selected_point_params">P1=%1$.4f P2=%2$d P3=%3$.4f P4=%4$d</string>
+    <string name="pareto_selected_point_metrics">Avg Utility %1$.4f | Std Dev %2$.4f | Final Capital %3$.2f | Legacy Gap %4$.2f</string>
+    <string name="pareto_selected_point_flags">Reference: %1$s | Applied: %2$s | Selected: %3$s</string>
+    <string name="pareto_flag_yes">yes</string>
+    <string name="pareto_flag_no">no</string>
     <string name="chart_trace_p1">P1</string>
     <string name="chart_trace_p2">P2</string>
 
@@ -370,6 +395,7 @@
     <string name="privacy_consent_accept">I consent</string>
     <string name="privacy_consent_decline">No, thanks</string>
     <string name="privacy_consent_required_ai">Privacy consent is required to use AI features.</string>
+    <string name="privacy_policy_url">https://www.example.com/privacy_policy</string>
     
     <!-- Added Navigation -->
     <string name="nav_setup">Setup</string>

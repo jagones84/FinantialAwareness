@@ -38,7 +38,7 @@ object PdfExporter {
         sensitivityResults: List<com.example.daysurpopt.domain.SensitivityResult>? = null,
         aiComment: String? = null,
         modelName: String? = null,
-        optimizationMode: OptimizationMode = OptimizationMode.BEST_COMPROMISE,
+        optimizationMode: OptimizationMode = OptimizationMode.TRUE_SCALAR,
         paretoFrontResult: ParetoFrontResult? = null,
         compareState: com.example.daysurpopt.domain.CompareState? = null,
         profile2Results: Triple<com.example.daysurpopt.domain.ObjectiveResults?, List<SimulationYear>, List<com.example.daysurpopt.domain.SensitivityResult>?>? = null,
@@ -388,28 +388,28 @@ object PdfExporter {
         resRows.add(resRow(context.getString(R.string.label_objective_function), objectiveValue, deltaObj?.deltaFObjW))
         resRows.add(resRow(context.getString(R.string.label_average_utility), results.map { it.funzioneUtilita }.average(), deltaObj?.deltaAvgUtilita))
         resRows.add(resRow(context.getString(R.string.label_stability_index), objResults.stabilityIndex, deltaObj?.deltaStabilityIndex))
-        if (paretoFrontResult != null) {
-            resRows.add(
-                listOf(
-                    context.getString(R.string.optimization_mode_title),
-                    if (optimizationMode == OptimizationMode.BEST_COMPROMISE) {
-                        context.getString(R.string.optimization_mode_best_compromise)
-                    } else {
-                        context.getString(R.string.optimization_mode_pareto_front)
-                    }
-                )
+        resRows.add(
+            listOf(
+                context.getString(R.string.optimization_mode_title),
+                when (optimizationMode) {
+                    OptimizationMode.TRUE_SCALAR -> context.getString(R.string.optimization_mode_true_scalar)
+                    OptimizationMode.PARETO_KNEE -> context.getString(R.string.optimization_mode_pareto_knee)
+                    OptimizationMode.PARETO_FRONT -> context.getString(R.string.optimization_mode_pareto_front)
+                }
             )
+        )
+        if (paretoFrontResult != null) {
             resRows.add(
                 listOf(
                     context.getString(R.string.pareto_front_points_label),
                     paretoFrontResult.points.size.toString()
                 )
             )
-            paretoFrontResult.selectedCompromise?.let { selected ->
+            paretoFrontResult.referencePoint?.let { selected ->
                 resRows.add(
                     resRow(
-                        context.getString(R.string.pareto_compromise_score_label),
-                        selected.compromiseScore ?: 0.0,
+                        context.getString(R.string.pareto_knee_score_label),
+                        selected.kneeScore ?: 0.0,
                         null
                     )
                 )

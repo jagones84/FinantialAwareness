@@ -74,7 +74,7 @@ object ParetoOptimizationLogic {
 
         return ParetoFrontResult(
             points = front,
-            selectedCompromise = null,
+            referencePoint = null,
             idealAvgUtility = idealAvg,
             idealStdDevUtility = idealStd
         )

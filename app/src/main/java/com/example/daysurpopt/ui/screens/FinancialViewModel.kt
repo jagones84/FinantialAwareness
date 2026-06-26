@@ -35,10 +35,74 @@ data class OptimizationResult(
     val p3: Double,
     val p4: Int,
     val paretoPointCount: Int = 0,
-    val compromiseScore: Double? = null,
+    val kneeScore: Double? = null,
     val selectedAvgUtility: Double? = null,
     val selectedStdDev: Double? = null
 )
+
+internal fun applyOptimizationParamsForTest(
+    baseInputs: FinancialInput,
+    point: ParetoPoint
+): FinancialInput {
+    val p2 = point.params.p2
+    val p4 = maxOf(point.params.p4, p2)
+    return baseInputs.copy(
+        p1SavingRatioSurplus = point.params.p1,
+        p2EtaFineRisparmioNoCapitale = p2,
+        p3PercentualeCapitaleDaSpendereAnnualmente = point.params.p3,
+        p4EtaAnticipataInizioSpesaCapitale = p4
+    )
+}
+
+internal fun shouldSyncSelectedParetoPointToReference(
+    previousSelection: ParetoPoint?,
+    previousReference: ParetoPoint?
+): Boolean {
+    return previousSelection == null || previousSelection.params == previousReference?.params
+}
+
+internal fun shouldSyncAppliedParetoPointToReference(
+    previousApplied: OptimizationMarkerSnapshot?,
+    previousReference: ParetoPoint?
+): Boolean {
+    return previousApplied == null || previousApplied.params == previousReference?.params
+}
+
+internal fun chartWeightReleaseActionForMode(mode: OptimizationMode): String {
+    return when (mode) {
+        OptimizationMode.TRUE_SCALAR -> "rerun_scalar"
+        OptimizationMode.PARETO_KNEE -> "rerun_knee"
+        OptimizationMode.PARETO_FRONT -> "rerun_front"
+    }
+}
+
+internal fun applyChartWeightUpdateForTest(
+    currentInputs: FinancialInput,
+    newWeight: Double
+): Pair<FinancialInput, FinancialInputUI> {
+    val updatedInputs = currentInputs.copy(bonusStdWeight = newWeight)
+    return updatedInputs to FinancialInputUI.from(updatedInputs)
+}
+
+internal fun defaultOptimizationModeForTest(): OptimizationMode {
+    return OptimizationMode.TRUE_SCALAR
+}
+
+internal fun optimizationExecutionPathForMode(mode: OptimizationMode): String {
+    return when (mode) {
+        OptimizationMode.TRUE_SCALAR -> "scalar_optimizer"
+        OptimizationMode.PARETO_KNEE -> "pareto_knee"
+        OptimizationMode.PARETO_FRONT -> "pareto_front"
+    }
+}
+
+internal fun optimizationModeDisplayNameForTest(mode: OptimizationMode): String {
+    return when (mode) {
+        OptimizationMode.TRUE_SCALAR -> "True Scalar"
+        OptimizationMode.PARETO_KNEE -> "Pareto Knee"
+        OptimizationMode.PARETO_FRONT -> "Pareto Front"
+    }
+}
 
 class FinancialViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application.applicationContext
@@ -242,8 +306,8 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                         specificExpenses = specificExpenses,
                         surplusData = surplusData
                     )
-                    val selectedCompromise = paretoResult.points.takeIf { it.isNotEmpty() }?.let {
-                        CompromiseSelectionLogic.selectBestCompromise(it)
+                    val referencePoint = paretoResult.points.takeIf { it.isNotEmpty() }?.let {
+                        ParetoKneeSelectionLogic.selectKneePoint(it)
                     }
                     val optimizationNarrative = when {
                         paretoResult.points.isEmpty() -> """
@@ -256,19 +320,19 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                             - Pareto points found: ${paretoResult.points.size}
                             - Ideal Avg Utility: ${String.format(Locale.US, "%.4f", paretoResult.idealAvgUtility)}
                             - Ideal Std Dev: ${String.format(Locale.US, "%.4f", paretoResult.idealStdDevUtility)}
-                            - Reference compromise: score=${String.format(Locale.US, "%.4f", selectedCompromise?.compromiseScore ?: 0.0)}, P1=${String.format(Locale.US, "%.2f", selectedCompromise?.params?.p1 ?: baseInputs.p1SavingRatioSurplus)}, P2=${selectedCompromise?.params?.p2 ?: baseInputs.p2EtaFineRisparmioNoCapitale}, P3=${String.format(Locale.US, "%.2f", selectedCompromise?.params?.p3 ?: baseInputs.p3PercentualeCapitaleDaSpendereAnnualmente)}, P4=${selectedCompromise?.params?.p4 ?: baseInputs.p4EtaAnticipataInizioSpesaCapitale}
+                            - Knee reference: score=${String.format(Locale.US, "%.4f", referencePoint?.kneeScore ?: 0.0)}, P1=${String.format(Locale.US, "%.2f", referencePoint?.params?.p1 ?: baseInputs.p1SavingRatioSurplus)}, P2=${referencePoint?.params?.p2 ?: baseInputs.p2EtaFineRisparmioNoCapitale}, P3=${String.format(Locale.US, "%.2f", referencePoint?.params?.p3 ?: baseInputs.p3PercentualeCapitaleDaSpendereAnnualmente)}, P4=${referencePoint?.params?.p4 ?: baseInputs.p4EtaAnticipataInizioSpesaCapitale}
                         """.trimIndent()
 
                         else -> """
                             - Optimization mode: Best Compromise
                             - Pareto points found: ${paretoResult.points.size}
                             - Current scalar score: ${String.format(Locale.US, "%.4f", objectiveFunctionValue ?: 0.0)}
-                            - Compromise score: ${String.format(Locale.US, "%.4f", selectedCompromise?.compromiseScore ?: 0.0)}
+                            - Knee score: ${String.format(Locale.US, "%.4f", referencePoint?.kneeScore ?: 0.0)}
                             - Optimized params:
-                              P1=${String.format(Locale.US, "%.2f", selectedCompromise?.params?.p1 ?: baseInputs.p1SavingRatioSurplus)}
-                              P2=${selectedCompromise?.params?.p2 ?: baseInputs.p2EtaFineRisparmioNoCapitale}
-                              P3=${String.format(Locale.US, "%.2f", selectedCompromise?.params?.p3 ?: baseInputs.p3PercentualeCapitaleDaSpendereAnnualmente)}
-                              P4=${selectedCompromise?.params?.p4 ?: baseInputs.p4EtaAnticipataInizioSpesaCapitale}
+                              P1=${String.format(Locale.US, "%.2f", referencePoint?.params?.p1 ?: baseInputs.p1SavingRatioSurplus)}
+                              P2=${referencePoint?.params?.p2 ?: baseInputs.p2EtaFineRisparmioNoCapitale}
+                              P3=${String.format(Locale.US, "%.2f", referencePoint?.params?.p3 ?: baseInputs.p3PercentualeCapitaleDaSpendereAnnualmente)}
+                              P4=${referencePoint?.params?.p4 ?: baseInputs.p4EtaAnticipataInizioSpesaCapitale}
                         """.trimIndent()
                     }
                     
@@ -344,9 +408,19 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     var surplusData by mutableStateOf(SurplusDataRepository.loadInputs(context))
         private set
 
-    var optimizationMode by mutableStateOf(OptimizationMode.BEST_COMPROMISE)
+    var optimizationMode by mutableStateOf(defaultOptimizationModeForTest())
         private set
     var paretoFrontResult by mutableStateOf<ParetoFrontResult?>(null)
+        private set
+    var lastTrueScalarSnapshot by mutableStateOf<OptimizationMarkerSnapshot?>(null)
+        private set
+    var lastParetoCompromiseSnapshot by mutableStateOf<OptimizationMarkerSnapshot?>(null)
+        private set
+    var lastParetoReferenceSnapshot by mutableStateOf<OptimizationMarkerSnapshot?>(null)
+        private set
+    var selectedParetoPoint by mutableStateOf<ParetoPoint?>(null)
+        private set
+    var appliedParetoSnapshot by mutableStateOf<OptimizationMarkerSnapshot?>(null)
         private set
 
     var objectiveFunctionValue by mutableStateOf<Double?>(null)
@@ -451,95 +525,68 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         saveInputs()
     }
 
+    fun updateChartWeight(newWeight: Double) {
+        val (updatedInputs, updatedUiInputs) = applyChartWeightUpdateForTest(inputs, newWeight)
+        inputs = updatedInputs
+        uiInputs = updatedUiInputs
+        saveInputs()
+    }
+
     fun updateOptimizationMode(mode: OptimizationMode) {
         optimizationMode = mode
-        clearOptimizationArtifacts()
+        optimizationResult = null
     }
 
     fun runOptimization() {
         viewModelScope.launch {
             optimizing = true
             optimizationResult = null
-
-            val cfg = OptimizationLogic.parseGaConfig(gaUI, inputs)
-            val front = withContext(Dispatchers.Default) {
-                ParetoOptimizationLogic.optimizeParetoParameters(
-                    baseInputs = inputs,
-                    config = cfg,
-                    specificExpenses = specificExpenses,
-                    surplusData = surplusData
-                )
-            }
-            val selectedCompromise = withContext(Dispatchers.Default) {
-                front.points.takeIf { it.isNotEmpty() }?.let {
-                    CompromiseSelectionLogic.selectBestCompromise(it)
+            try {
+                when (optimizationMode) {
+                    OptimizationMode.TRUE_SCALAR -> runTrueScalarOptimization()
+                    OptimizationMode.PARETO_KNEE -> runParetoKneeOptimization()
+                    OptimizationMode.PARETO_FRONT -> runParetoFrontOptimization()
                 }
-            }
-            paretoFrontResult = front.copy(selectedCompromise = selectedCompromise)
-
-            if (front.points.isEmpty()) {
-                optimizationResult = OptimizationResult(
-                    mode = optimizationMode,
-                    gaFitness = 0.0,
-                    bonusWeight = inputs.bonusStdWeight,
-                    finalFitness = 0.0,
-                    p1 = inputs.p1SavingRatioSurplus,
-                    p2 = inputs.p2EtaFineRisparmioNoCapitale,
-                    p3 = inputs.p3PercentualeCapitaleDaSpendereAnnualmente,
-                    p4 = inputs.p4EtaAnticipataInizioSpesaCapitale,
-                    paretoPointCount = 0
-                )
+            } finally {
                 optimizing = false
-                return@launch
             }
+        }
+    }
 
-            if (optimizationMode == OptimizationMode.BEST_COMPROMISE && selectedCompromise != null) {
-                val p2 = selectedCompromise.params.p2
-                val p4 = maxOf(selectedCompromise.params.p4, p2)
-                inputs = inputs.copy(
-                    p1SavingRatioSurplus = selectedCompromise.params.p1,
-                    p2EtaFineRisparmioNoCapitale = p2,
-                    p3PercentualeCapitaleDaSpendereAnnualmente = selectedCompromise.params.p3,
-                    p4EtaAnticipataInizioSpesaCapitale = p4
-                )
-                saveInputs()
-
-                updateUiInputs(
-                    uiInputs.copy(
-                        p1SavingRatioSurplus = String.format(Locale.US, "%.4f", selectedCompromise.params.p1),
-                        p2EtaFineRisparmioNoCapitale = p2.toString(),
-                        p3PercentualeCapitaleDaSpendereAnnualmente = String.format(
-                            Locale.US,
-                            "%.4f",
-                            selectedCompromise.params.p3
-                        ),
-                        p4EtaAnticipataInizioSpesaCapitale = p4.toString()
-                    )
-                )
+    fun onChartWeightChangeFinished() {
+        viewModelScope.launch {
+            when (optimizationMode) {
+                OptimizationMode.TRUE_SCALAR -> runOptimization()
+                OptimizationMode.PARETO_KNEE -> runOptimization()
+                OptimizationMode.PARETO_FRONT -> runOptimization()
             }
+        }
+    }
 
-            runSimulation()
+    fun selectParetoPoint(point: ParetoPoint) {
+        selectedParetoPoint = point
+    }
 
-            val summaryPoint = selectedCompromise ?: front.points.first()
-            optimizationResult = OptimizationResult(
-                mode = optimizationMode,
-                gaFitness = front.points.size.toDouble(),
-                bonusWeight = inputs.bonusStdWeight,
-                finalFitness = when (optimizationMode) {
-                    OptimizationMode.BEST_COMPROMISE -> summaryPoint.compromiseScore ?: 0.0
-                    OptimizationMode.PARETO_FRONT -> summaryPoint.avgUtility
-                },
-                p1 = summaryPoint.params.p1,
-                p2 = summaryPoint.params.p2,
-                p3 = summaryPoint.params.p3,
-                p4 = summaryPoint.params.p4,
-                paretoPointCount = front.points.size,
-                compromiseScore = summaryPoint.compromiseScore,
-                selectedAvgUtility = summaryPoint.avgUtility,
-                selectedStdDev = summaryPoint.stdDevUtility
+    fun resetParetoSelectionToReference() {
+        selectedParetoPoint = paretoFrontResult?.referencePoint
+    }
+
+    fun applySelectedParetoPoint() {
+        val point = selectedParetoPoint ?: return
+        viewModelScope.launch {
+            inputs = applyOptimizationParams(inputs, point.params)
+            saveInputs()
+            uiInputs = FinancialInputUI.from(inputs)
+
+            val (objective, years, objectives) = evaluateFinancialInput(inputs)
+            publishSimulationResults(objective, years, objectives)
+
+            appliedParetoSnapshot = point.toOptimizationMarkerSnapshot(
+                mode = OptimizationMode.PARETO_FRONT,
+                objectiveValue = objectives.fObjW,
+                stabilityIndex = objectives.stabilityIndex,
+                weightUsed = inputs.bonusStdWeight
             )
-
-            optimizing = false
         }
     }
 
@@ -626,6 +673,230 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     private fun saveInputs() {
         FinancialDataRepository.saveInputs(context, inputs)
     }
+
+    private fun applyOptimizationParams(baseInputs: FinancialInput, params: ParamsCandidate): FinancialInput {
+        return applyOptimizationParamsForTest(
+            baseInputs = baseInputs,
+            point = ParetoPoint(
+                params = params,
+                avgUtility = 0.0,
+                stdDevUtility = 0.0,
+                isFeasible = true,
+                finalCapital = 0.0,
+                legacyGap = 0.0
+            )
+        )
+    }
+
+    private suspend fun evaluateFinancialInput(financialInput: FinancialInput): Triple<Double, List<SimulationYear>, ObjectiveResults> {
+        return withContext(Dispatchers.Default) {
+            val years = calculateSimulation(financialInput, specificExpenses, surplusData)
+            val objectives = calculateObjectivesFromYears(
+                years = years,
+                bonusStdWeight = financialInput.bonusStdWeight,
+                legacyTarget = financialInput.soldiDaConservare
+            )
+            Triple(objectives.fObjW, years, objectives)
+        }
+    }
+
+    private fun publishSimulationResults(
+        objective: Double,
+        years: List<SimulationYear>,
+        objectives: ObjectiveResults
+    ) {
+        objectiveFunctionValue = objective
+        simulationResults = years
+        objectiveResults = objectives
+
+        if (compareState.isComparing && profile2ObjectiveResults != null) {
+            deltaObjectiveResults = DeltaCalculator.computeDeltaObjectives(objectives, profile2ObjectiveResults!!)
+            deltaSimulationResults = DeltaCalculator.computeDeltaSimulation(
+                years,
+                profile2SimulationResults
+            )
+        }
+    }
+
+    private suspend fun runTrueScalarOptimization() {
+        val scalarConfig = OptimizationLogic.parseGaConfig(gaUI, inputs).copy(maximize = true)
+        val scalarResult = withContext(Dispatchers.Default) {
+            OptimizationLogic.optimizeParameters(
+                baseInputs = inputs,
+                config = scalarConfig,
+                specificExpenses = specificExpenses,
+                surplusData = surplusData,
+                initialGuess = ParamsCandidate(
+                    inputs.p1SavingRatioSurplus,
+                    inputs.p2EtaFineRisparmioNoCapitale,
+                    inputs.p3PercentualeCapitaleDaSpendereAnnualmente,
+                    inputs.p4EtaAnticipataInizioSpesaCapitale
+                )
+            )
+        }
+
+        inputs = applyOptimizationParams(inputs, scalarResult.bestParams)
+        saveInputs()
+        uiInputs = FinancialInputUI.from(inputs)
+
+        val (objective, years, objectives) = evaluateFinancialInput(inputs)
+        publishSimulationResults(objective, years, objectives)
+
+        lastTrueScalarSnapshot = OptimizationMarkerSnapshot(
+            mode = OptimizationMode.TRUE_SCALAR,
+            params = scalarResult.bestParams,
+            objectiveValue = objectives.fObjW,
+            avgUtility = objectives.avgUtilita,
+            stdDevUtility = objectives.stdDev,
+            stabilityIndex = objectives.stabilityIndex,
+            weightUsed = inputs.bonusStdWeight
+        )
+
+        optimizationResult = OptimizationResult(
+            mode = OptimizationMode.TRUE_SCALAR,
+            gaFitness = scalarResult.bestFitness,
+            bonusWeight = inputs.bonusStdWeight,
+            finalFitness = objectives.fObjW,
+            p1 = scalarResult.bestParams.p1,
+            p2 = scalarResult.bestParams.p2,
+            p3 = scalarResult.bestParams.p3,
+            p4 = scalarResult.bestParams.p4,
+            paretoPointCount = 0,
+            kneeScore = null,
+            selectedAvgUtility = objectives.avgUtilita,
+            selectedStdDev = objectives.stdDev
+        )
+    }
+
+    private suspend fun runParetoKneeOptimization() {
+        val cfg = OptimizationLogic.parseGaConfig(gaUI, inputs)
+        val front = withContext(Dispatchers.Default) {
+            ParetoOptimizationLogic.optimizeParetoParameters(
+                baseInputs = inputs,
+                config = cfg,
+                specificExpenses = specificExpenses,
+                surplusData = surplusData
+            )
+        }
+        val selectedKnee = withContext(Dispatchers.Default) {
+            front.points.takeIf { it.isNotEmpty() }?.let {
+                ParetoKneeSelectionLogic.selectKneePoint(it)
+            }
+        }
+
+        paretoFrontResult = front.copy(referencePoint = selectedKnee)
+        if (front.points.isEmpty() || selectedKnee == null) {
+            optimizationResult = OptimizationResult(
+                mode = OptimizationMode.PARETO_KNEE,
+                gaFitness = 0.0,
+                bonusWeight = inputs.bonusStdWeight,
+                finalFitness = 0.0,
+                p1 = inputs.p1SavingRatioSurplus,
+                p2 = inputs.p2EtaFineRisparmioNoCapitale,
+                p3 = inputs.p3PercentualeCapitaleDaSpendereAnnualmente,
+                p4 = inputs.p4EtaAnticipataInizioSpesaCapitale,
+                paretoPointCount = 0
+            )
+            return
+        }
+
+        inputs = applyOptimizationParams(inputs, selectedKnee.params)
+        saveInputs()
+        uiInputs = FinancialInputUI.from(inputs)
+
+        val (objective, years, objectives) = evaluateFinancialInput(inputs)
+        publishSimulationResults(objective, years, objectives)
+
+        lastParetoCompromiseSnapshot = selectedKnee.toOptimizationMarkerSnapshot(
+            mode = OptimizationMode.PARETO_KNEE,
+            objectiveValue = objectives.fObjW,
+            stabilityIndex = objectives.stabilityIndex,
+            weightUsed = inputs.bonusStdWeight
+        )
+
+        optimizationResult = OptimizationResult(
+            mode = OptimizationMode.PARETO_KNEE,
+            gaFitness = front.points.size.toDouble(),
+            bonusWeight = inputs.bonusStdWeight,
+            finalFitness = selectedKnee.kneeScore ?: 0.0,
+            p1 = selectedKnee.params.p1,
+            p2 = selectedKnee.params.p2,
+            p3 = selectedKnee.params.p3,
+            p4 = selectedKnee.params.p4,
+            paretoPointCount = front.points.size,
+            kneeScore = selectedKnee.kneeScore,
+            selectedAvgUtility = selectedKnee.avgUtility,
+            selectedStdDev = selectedKnee.stdDevUtility
+        )
+    }
+
+    private suspend fun runParetoFrontOptimization() {
+        val cfg = OptimizationLogic.parseGaConfig(gaUI, inputs)
+        val front = withContext(Dispatchers.Default) {
+            ParetoOptimizationLogic.optimizeParetoParameters(
+                baseInputs = inputs,
+                config = cfg,
+                specificExpenses = specificExpenses,
+                surplusData = surplusData
+            )
+        }
+        val referencePoint = withContext(Dispatchers.Default) {
+            front.points.takeIf { it.isNotEmpty() }?.let {
+                ParetoKneeSelectionLogic.selectKneePoint(it)
+            }
+        }
+
+        paretoFrontResult = front.copy(referencePoint = referencePoint)
+        if (front.points.isEmpty() || referencePoint == null) {
+            selectedParetoPoint = null
+            appliedParetoSnapshot = null
+            lastParetoReferenceSnapshot = null
+            optimizationResult = OptimizationResult(
+                mode = OptimizationMode.PARETO_FRONT,
+                gaFitness = 0.0,
+                bonusWeight = inputs.bonusStdWeight,
+                finalFitness = 0.0,
+                p1 = inputs.p1SavingRatioSurplus,
+                p2 = inputs.p2EtaFineRisparmioNoCapitale,
+                p3 = inputs.p3PercentualeCapitaleDaSpendereAnnualmente,
+                p4 = inputs.p4EtaAnticipataInizioSpesaCapitale,
+                paretoPointCount = 0
+            )
+            return
+        }
+
+        inputs = applyOptimizationParams(inputs, referencePoint.params)
+        saveInputs()
+        uiInputs = FinancialInputUI.from(inputs)
+
+        val (objective, years, objectives) = evaluateFinancialInput(inputs)
+        publishSimulationResults(objective, years, objectives)
+
+        val appliedSnapshot = referencePoint.toOptimizationMarkerSnapshot(
+            mode = OptimizationMode.PARETO_FRONT,
+            objectiveValue = objectives.fObjW,
+            stabilityIndex = objectives.stabilityIndex,
+            weightUsed = inputs.bonusStdWeight
+        )
+        selectedParetoPoint = referencePoint
+        appliedParetoSnapshot = appliedSnapshot
+        lastParetoReferenceSnapshot = appliedSnapshot
+
+        optimizationResult = OptimizationResult(
+            mode = OptimizationMode.PARETO_FRONT,
+            gaFitness = front.points.size.toDouble(),
+            bonusWeight = inputs.bonusStdWeight,
+            finalFitness = referencePoint.kneeScore ?: referencePoint.avgUtility,
+            p1 = referencePoint.params.p1,
+            p2 = referencePoint.params.p2,
+            p3 = referencePoint.params.p3,
+            p4 = referencePoint.params.p4,
+            paretoPointCount = front.points.size,
+            kneeScore = referencePoint.kneeScore,
+            selectedAvgUtility = referencePoint.avgUtility,
+            selectedStdDev = referencePoint.stdDevUtility
+        )
+    }
     
     fun refreshSurplusData() {
         surplusLavorativaMedia = surplusData.calculateSurplusGiornalieroMedioLavorativa()
@@ -647,6 +918,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         SpecificExpensesRepository.saveExpenses(context, List(10) { SpecificExpense() })
         specificExpenses = SpecificExpensesRepository.loadExpenses(context)
         clearOptimizationArtifacts()
+        clearOptimizationSnapshots()
         saveInputs()
         GaConfigRepository.saveConfig(context, gaUI)
     }
@@ -664,6 +936,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         specificExpenses = restoredState.specificExpenses
         surplusData = restoredState.surplusInput
         clearOptimizationArtifacts()
+        clearOptimizationSnapshots()
         refreshSurplusData()
     }
 
@@ -808,5 +1081,13 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     private fun clearOptimizationArtifacts() {
         paretoFrontResult = null
         optimizationResult = null
+        selectedParetoPoint = null
+        appliedParetoSnapshot = null
+    }
+
+    private fun clearOptimizationSnapshots() {
+        lastTrueScalarSnapshot = null
+        lastParetoCompromiseSnapshot = null
+        lastParetoReferenceSnapshot = null
     }
 }

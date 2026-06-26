@@ -348,6 +348,36 @@ object PlotlyHtmlProvider {
                          };
                        }
 
+                       function setupPointSelection(spec) {
+                         var gd = document.getElementById('plot');
+                         if (!gd) return;
+
+                         if (window.__clickCleanup) {
+                           try { window.__clickCleanup(); } catch(e) {}
+                           window.__clickCleanup = null;
+                         }
+
+                         var meta = getMeta(spec);
+                         if (!meta || !meta.pointSelection) return;
+
+                         function onClick(ev) {
+                           try {
+                             var point = ev && ev.points && ev.points[0] ? ev.points[0] : null;
+                             if (!point) return;
+                             var traceName = (point.data && point.data.name) ? point.data.name : '';
+                             var pointIndex = (point.pointIndex !== undefined) ? point.pointIndex : -1;
+                             if (window.AndroidPoint && window.AndroidPoint.pointSelected) {
+                               window.AndroidPoint.pointSelected(traceName, pointIndex);
+                             }
+                           } catch(e) {}
+                         }
+
+                         gd.on('plotly_click', onClick);
+                         window.__clickCleanup = function() {
+                           try { gd.removeAllListeners('plotly_click'); } catch(e) {}
+                         };
+                       }
+
                        try {
                          var meta = getMeta(spec);
                          var config = {
@@ -370,6 +400,7 @@ object PlotlyHtmlProvider {
                          promise.then(function() {
                             statusText('[JS] OK ' + s.w + 'x' + s.h, 'green');
                             setupDraggablePoints(spec);
+                            setupPointSelection(spec);
                             setTimeout(function(){
                                 var el = document.getElementById('status');
                                 if(el && el.style.background === 'green') {

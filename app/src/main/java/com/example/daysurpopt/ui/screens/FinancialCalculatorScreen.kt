@@ -127,6 +127,7 @@ fun FinancialCalculatorContent(
 ) {
     val scrollState = rememberScrollState()
     var showLanguageMenu by remember { mutableStateOf(false) }
+    val displayedMode = optimizationResult?.mode ?: optimizationMode
 
     Scaffold(
         topBar = {
@@ -242,41 +243,28 @@ fun FinancialCalculatorContent(
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = { onUpdateOptimizationMode(OptimizationMode.BEST_COMPROMISE) },
-                        modifier = Modifier.weight(1f),
-                        colors = if (optimizationMode == OptimizationMode.BEST_COMPROMISE) {
-                            ButtonDefaults.buttonColors()
-                        } else {
-                            ButtonDefaults.outlinedButtonColors()
-                        }
-                    ) {
-                        Text(stringResource(R.string.optimization_mode_best_compromise))
-                    }
-                    OutlinedButton(
-                        onClick = { onUpdateOptimizationMode(OptimizationMode.PARETO_FRONT) },
-                        modifier = Modifier.weight(1f),
-                        colors = if (optimizationMode == OptimizationMode.PARETO_FRONT) {
-                            ButtonDefaults.outlinedButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        } else {
-                            ButtonDefaults.outlinedButtonColors()
-                        }
-                    ) {
-                        Text(stringResource(R.string.optimization_mode_pareto_front))
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OptimizationModeButton(
+                        selected = optimizationMode == OptimizationMode.TRUE_SCALAR,
+                        label = stringResource(R.string.optimization_mode_true_scalar),
+                        onClick = { onUpdateOptimizationMode(OptimizationMode.TRUE_SCALAR) }
+                    )
+                    OptimizationModeButton(
+                        selected = optimizationMode == OptimizationMode.PARETO_KNEE,
+                        label = stringResource(R.string.optimization_mode_pareto_knee),
+                        onClick = { onUpdateOptimizationMode(OptimizationMode.PARETO_KNEE) }
+                    )
+                    OptimizationModeButton(
+                        selected = optimizationMode == OptimizationMode.PARETO_FRONT,
+                        label = stringResource(R.string.optimization_mode_pareto_front),
+                        onClick = { onUpdateOptimizationMode(OptimizationMode.PARETO_FRONT) }
+                    )
                 }
                 Text(
-                    text = if (optimizationMode == OptimizationMode.BEST_COMPROMISE) {
-                        stringResource(R.string.optimization_mode_best_compromise_desc)
-                    } else {
-                        stringResource(R.string.optimization_mode_pareto_front_desc)
+                    text = when (optimizationMode) {
+                        OptimizationMode.TRUE_SCALAR -> stringResource(R.string.optimization_mode_true_scalar_desc)
+                        OptimizationMode.PARETO_KNEE -> stringResource(R.string.optimization_mode_pareto_knee_desc)
+                        OptimizationMode.PARETO_FRONT -> stringResource(R.string.optimization_mode_pareto_front_desc)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -356,33 +344,48 @@ fun FinancialCalculatorContent(
                             }
 
                             optimizationResult?.let { res ->
-                                val summaryText = if (res.mode == OptimizationMode.BEST_COMPROMISE) {
-                                    stringResource(
-                                        R.string.optimization_mode_compromise_summary,
+                                val summaryText = when (res.mode) {
+                                    OptimizationMode.TRUE_SCALAR -> stringResource(
+                                        R.string.optimization_mode_true_scalar_summary,
+                                        res.p1,
+                                        res.p2,
+                                        res.p3,
+                                        res.p4,
+                                        res.finalFitness,
+                                        res.bonusWeight
+                                    )
+                                    OptimizationMode.PARETO_KNEE -> stringResource(
+                                        R.string.optimization_mode_pareto_knee_summary,
                                         res.paretoPointCount,
-                                        res.compromiseScore ?: 0.0,
+                                        res.kneeScore ?: 0.0,
                                         res.p1,
                                         res.p2,
                                         res.p3,
                                         res.p4
                                     )
-                                } else {
-                                    stringResource(R.string.optimization_mode_pareto_summary, res.paretoPointCount)
+                                    OptimizationMode.PARETO_FRONT -> stringResource(
+                                        R.string.optimization_mode_pareto_summary_applied,
+                                        res.paretoPointCount,
+                                        res.p1,
+                                        res.p2,
+                                        res.p3,
+                                        res.p4
+                                    )
                                 }
                                 Text(
                                     text = summaryText,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
-                                if (res.mode == OptimizationMode.PARETO_FRONT && paretoFrontResult?.selectedCompromise != null) {
+                                if (res.mode == OptimizationMode.PARETO_FRONT && paretoFrontResult?.referencePoint != null) {
                                     Text(
                                         text = stringResource(
-                                            R.string.pareto_reference_compromise,
-                                            paretoFrontResult.selectedCompromise!!.compromiseScore ?: 0.0,
-                                            paretoFrontResult.selectedCompromise!!.params.p1,
-                                            paretoFrontResult.selectedCompromise!!.params.p2,
-                                            paretoFrontResult.selectedCompromise!!.params.p3,
-                                            paretoFrontResult.selectedCompromise!!.params.p4
+                                            R.string.pareto_reference_knee,
+                                            paretoFrontResult.referencePoint!!.kneeScore ?: 0.0,
+                                            paretoFrontResult.referencePoint!!.params.p1,
+                                            paretoFrontResult.referencePoint!!.params.p2,
+                                            paretoFrontResult.referencePoint!!.params.p3,
+                                            paretoFrontResult.referencePoint!!.params.p4
                                         ),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
@@ -430,10 +433,10 @@ fun FinancialCalculatorContent(
                                     }
 
                                 Text(
-                                    text = if (optimizationMode == OptimizationMode.BEST_COMPROMISE) {
-                                        stringResource(R.string.optimization_mode_best_compromise_definition)
-                                    } else {
-                                        stringResource(R.string.optimization_mode_pareto_front_definition)
+                                    text = when (displayedMode) {
+                                        OptimizationMode.TRUE_SCALAR -> stringResource(R.string.optimization_mode_true_scalar_definition)
+                                        OptimizationMode.PARETO_KNEE -> stringResource(R.string.optimization_mode_pareto_knee_definition)
+                                        OptimizationMode.PARETO_FRONT -> stringResource(R.string.optimization_mode_pareto_front_definition)
                                     },
                                     style = MaterialTheme.typography.labelSmall,
                                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
@@ -698,6 +701,28 @@ fun FinancialCalculatorContent(
 }
 
 @Composable
+private fun OptimizationModeButton(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = if (selected) {
+            ButtonDefaults.outlinedButtonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        } else {
+            ButtonDefaults.outlinedButtonColors()
+        }
+    ) {
+        Text(label)
+    }
+}
+
+@Composable
 private fun MainSectionCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
@@ -760,7 +785,7 @@ fun FinancialCalculatorPreview() {
         profile1Name = "User",
         profile2Name = null,
         optimizing = false,
-        optimizationMode = OptimizationMode.BEST_COMPROMISE,
+        optimizationMode = OptimizationMode.TRUE_SCALAR,
         objectiveFunctionValue = 0.5,
         optimizationResult = null,
         paretoFrontResult = null,

@@ -38,10 +38,12 @@ fun PlotlyWebView(
     cameraView: String? = null,
     cameraTrigger: Int = 0,
     isPerspective: Boolean = true,
-    onCurveChanged: ((curveId: String, points: List<CurvePoint>) -> Unit)? = null
+    onCurveChanged: ((curveId: String, points: List<CurvePoint>) -> Unit)? = null,
+    onPointSelected: ((traceName: String, pointIndex: Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val onCurveChangedState by rememberUpdatedState(onCurveChanged)
+    val onPointSelectedState by rememberUpdatedState(onPointSelected)
     val gson = remember { Gson() }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
@@ -64,6 +66,14 @@ fun PlotlyWebView(
                 mainHandler.post { callback(curveId, points) }
             } catch (_: Exception) {
             }
+        }
+    }
+
+    class PointJsBridge {
+        @JavascriptInterface
+        fun pointSelected(traceName: String, pointIndex: Int) {
+            val callback = onPointSelectedState ?: return
+            mainHandler.post { callback(traceName, pointIndex) }
         }
     }
 
@@ -140,6 +150,7 @@ fun PlotlyWebView(
 
                 addJavascriptInterface(ChartsJsBridge(), "AndroidLog")
                 addJavascriptInterface(CurveJsBridge(), "AndroidCurve")
+                addJavascriptInterface(PointJsBridge(), "AndroidPoint")
 
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {

@@ -12,10 +12,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -33,10 +35,21 @@ import com.example.daysurpopt.R
 import com.example.daysurpopt.domain.FinancialInput
 import com.example.daysurpopt.domain.OptimizationMode
 import com.example.daysurpopt.domain.ParetoFrontResult
+import com.example.daysurpopt.domain.ParetoPoint
+import com.example.daysurpopt.logic.ChartMarkerBuilder
+import com.example.daysurpopt.logic.ParetoChartModel
+import com.example.daysurpopt.logic.ParetoChartModelBuilder
 import com.example.daysurpopt.ui.theme.ChartP1Hex
 import com.example.daysurpopt.ui.theme.ChartP2Hex
 import com.example.daysurpopt.ui.theme.MutedText
-import kotlin.math.roundToInt
+
+internal fun chartSliderValueForWeight(weight: Double): Float {
+    return weight.coerceIn(0.0, 1.0).toFloat()
+}
+
+internal fun chartWeightFromSliderValue(sliderValue: Float): Double {
+    return sliderValue.toDouble().coerceIn(0.0, 1.0)
+}
 
 /**
  * Screen that displays 3D/2D charts for parameter sensitivity analysis.
@@ -57,6 +70,8 @@ fun ChartsScreen(
     val isOptimizing = viewModel.optimizing
     val optimizationMode = viewModel.optimizationMode
     val paretoFrontResult = viewModel.paretoFrontResult
+    val selectedParetoPoint = viewModel.selectedParetoPoint
+    val appliedParetoSnapshot = viewModel.appliedParetoSnapshot
     
     // Compare Mode Data
     val isComparing = viewModel.compareState.isComparing
@@ -81,22 +96,48 @@ fun ChartsScreen(
     }
 
     // Construct Markers
-    val labelP1Current = stringResource(R.string.chart_p1_current)
+    val labelCurrentInputs = stringResource(R.string.chart_marker_current_inputs)
+    val labelTrueScalar = stringResource(R.string.chart_marker_true_scalar)
+    val labelParetoCompromise = stringResource(R.string.chart_marker_pareto_knee)
+    val labelParetoReference = stringResource(R.string.chart_marker_pareto_reference)
     val labelP2Optimal = stringResource(R.string.chart_p2_optimal)
     val labelP2OnP1 = stringResource(R.string.chart_p2_on_p1)
-    
-    val p1p2Markers = remember(inputsSnapshot, chartsViewModel.optimalObjW, isComparing, profile2Inputs, chartsViewModel.optimalObjW_2, chartsViewModel.optimalObjP2OnP1) {
-        val list = mutableListOf<Map<String, Any>>()
-        // Marker for Current Profile 1
-        list.add(mapOf(
-            "x" to listOf(inputsSnapshot.p1SavingRatioSurplus),
-            "y" to listOf(inputsSnapshot.p2EtaFineRisparmioNoCapitale),
-            "z" to listOf(chartsViewModel.optimalObjW),
-            "name" to labelP1Current,
-            "color" to ChartP1Hex
-        ))
+
+    val baseP1P2Markers = remember(
+        inputsSnapshot,
+        chartsViewModel.optimalObjW,
+        viewModel.lastTrueScalarSnapshot,
+        viewModel.lastParetoCompromiseSnapshot,
+        viewModel.lastParetoReferenceSnapshot,
+        labelCurrentInputs,
+        labelTrueScalar,
+        labelParetoCompromise,
+        labelParetoReference
+    ) {
+        ChartMarkerBuilder.buildP1P2Markers(
+            inputs = inputsSnapshot,
+            currentObjective = chartsViewModel.optimalObjW,
+            lastTrueScalar = viewModel.lastTrueScalarSnapshot,
+            lastParetoCompromise = viewModel.lastParetoCompromiseSnapshot,
+            lastParetoReference = viewModel.lastParetoReferenceSnapshot,
+            currentLabel = labelCurrentInputs,
+            trueScalarLabel = labelTrueScalar,
+            paretoCompromiseLabel = labelParetoCompromise,
+            paretoReferenceLabel = labelParetoReference
+        )
+    }
+
+    val p1p2Markers = remember(
+        baseP1P2Markers,
+        isComparing,
+        profile2Inputs,
+        chartsViewModel.optimalObjW_2,
+        chartsViewModel.optimalObjP2OnP1,
+        labelP2Optimal,
+        labelP2OnP1
+    ) {
+        val list = baseP1P2Markers.toMutableList()
         if (isComparing && profile2Inputs != null) {
-            // Marker for Profile 2 (if comparing)
             list.add(mapOf(
                 "x" to listOf(profile2Inputs.p1SavingRatioSurplus),
                 "y" to listOf(profile2Inputs.p2EtaFineRisparmioNoCapitale),
@@ -104,7 +145,6 @@ fun ChartsScreen(
                 "name" to labelP2Optimal,
                 "color" to ChartP2Hex
             ))
-            // Marker for P2 Params on P1 Scenario
             list.add(mapOf(
                 "x" to listOf(profile2Inputs.p1SavingRatioSurplus),
                 "y" to listOf(profile2Inputs.p2EtaFineRisparmioNoCapitale),
@@ -116,15 +156,40 @@ fun ChartsScreen(
         list
     }
 
-    val p3p4Markers = remember(inputsSnapshot, chartsViewModel.optimalObjW, isComparing, profile2Inputs, chartsViewModel.optimalObjW_2, chartsViewModel.optimalObjP1OnP2) {
-        val list = mutableListOf<Map<String, Any>>()
-        list.add(mapOf(
-            "x" to listOf(inputsSnapshot.p3PercentualeCapitaleDaSpendereAnnualmente),
-            "y" to listOf(inputsSnapshot.p4EtaAnticipataInizioSpesaCapitale),
-            "z" to listOf(chartsViewModel.optimalObjW),
-            "name" to labelP1Current,
-            "color" to ChartP1Hex
-        ))
+    val baseP3P4Markers = remember(
+        inputsSnapshot,
+        chartsViewModel.optimalObjW,
+        viewModel.lastTrueScalarSnapshot,
+        viewModel.lastParetoCompromiseSnapshot,
+        viewModel.lastParetoReferenceSnapshot,
+        labelCurrentInputs,
+        labelTrueScalar,
+        labelParetoCompromise,
+        labelParetoReference
+    ) {
+        ChartMarkerBuilder.buildP3P4Markers(
+            inputs = inputsSnapshot,
+            currentObjective = chartsViewModel.optimalObjW,
+            lastTrueScalar = viewModel.lastTrueScalarSnapshot,
+            lastParetoCompromise = viewModel.lastParetoCompromiseSnapshot,
+            lastParetoReference = viewModel.lastParetoReferenceSnapshot,
+            currentLabel = labelCurrentInputs,
+            trueScalarLabel = labelTrueScalar,
+            paretoCompromiseLabel = labelParetoCompromise,
+            paretoReferenceLabel = labelParetoReference
+        )
+    }
+
+    val p3p4Markers = remember(
+        baseP3P4Markers,
+        isComparing,
+        profile2Inputs,
+        chartsViewModel.optimalObjW_2,
+        chartsViewModel.optimalObjP1OnP2,
+        labelP2Optimal,
+        labelP2OnP1
+    ) {
+        val list = baseP3P4Markers.toMutableList()
         if (isComparing && profile2Inputs != null) {
             list.add(mapOf(
                 "x" to listOf(profile2Inputs.p3PercentualeCapitaleDaSpendereAnnualmente),
@@ -144,6 +209,21 @@ fun ChartsScreen(
         list
     }
 
+    val paretoChartModel = remember(
+        paretoFrontResult,
+        selectedParetoPoint,
+        appliedParetoSnapshot
+    ) {
+        ParetoChartModelBuilder.build(
+            points = paretoFrontResult?.points ?: emptyList(),
+            referencePoint = paretoFrontResult?.referencePoint,
+            appliedPoint = appliedParetoSnapshot?.let { snapshot ->
+                paretoFrontResult?.points?.firstOrNull { it.params == snapshot.params }
+            },
+            selectedPoint = selectedParetoPoint
+        )
+    }
+
     ChartsContent(
         p1p2State = chartsViewModel.p1p2State,
         p3p4State = chartsViewModel.p3p4State,
@@ -151,13 +231,14 @@ fun ChartsScreen(
         isComparing = isComparing,
         optimizationMode = optimizationMode,
         paretoFrontResult = paretoFrontResult,
+        selectedParetoPoint = selectedParetoPoint,
+        paretoChartModel = paretoChartModel,
         profile1Name = profile1Name,
         profile2Name = profile2Name,
         isOptimizing = isOptimizing,
         optimalObjW = chartsViewModel.optimalObjW,
         optimalObj0 = chartsViewModel.optimalObj0,
         optimalStabilityIndex = chartsViewModel.optimalStabilityIndex,
-        weightValues = listOf(0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0),
         showContours = chartsViewModel.showContours,
         showDeltaView = chartsViewModel.showDeltaView,
         useHeatmap = chartsViewModel.useHeatmap,
@@ -165,8 +246,11 @@ fun ChartsScreen(
         p1p2Markers = p1p2Markers,
         p3p4Markers = p3p4Markers,
         onBack = onBack,
-        onWeightChange = { newW -> viewModel.updateInputs(inputsSnapshot.copy(bonusStdWeight = newW)) },
-        onWeightChangeFinished = { viewModel.triggerRecalculation() },
+        onWeightChange = { newW -> viewModel.updateChartWeight(newW) },
+        onWeightChangeFinished = { viewModel.onChartWeightChangeFinished() },
+        onSelectParetoPoint = { viewModel.selectParetoPoint(it) },
+        onApplySelectedParetoPoint = { viewModel.applySelectedParetoPoint() },
+        onResetParetoSelection = { viewModel.resetParetoSelectionToReference() },
         onToggleShowContours = { chartsViewModel.toggleShowContours() },
         onToggleShowDeltaView = { chartsViewModel.toggleShowDeltaView() },
         onToggleUseHeatmap = { chartsViewModel.toggleUseHeatmap() },
@@ -187,7 +271,6 @@ fun ChartsScreen(
  * @param optimalObjW Current optimal objective value (weighted).
  * @param optimalObj0 Current optimal objective value (base).
  * @param optimalStabilityIndex Current stability index.
- * @param weightValues List of selectable weight values for the slider.
  * @param showContours Whether to show contour lines on the 3D surface.
  * @param showDeltaView Whether to show the delta (P2 - P1) instead of absolute values.
  * @param useHeatmap Whether to use a 2D heatmap instead of a 3D surface.
@@ -211,13 +294,14 @@ fun ChartsContent(
     isComparing: Boolean,
     optimizationMode: OptimizationMode,
     paretoFrontResult: ParetoFrontResult?,
+    selectedParetoPoint: ParetoPoint?,
+    paretoChartModel: ParetoChartModel,
     profile1Name: String?,
     profile2Name: String?,
     isOptimizing: Boolean,
     optimalObjW: Double,
     optimalObj0: Double,
     optimalStabilityIndex: Double,
-    weightValues: List<Double>,
     showContours: Boolean,
     showDeltaView: Boolean,
     useHeatmap: Boolean,
@@ -227,6 +311,9 @@ fun ChartsContent(
     onBack: () -> Unit,
     onWeightChange: (Double) -> Unit,
     onWeightChangeFinished: () -> Unit,
+    onSelectParetoPoint: (ParetoPoint) -> Unit,
+    onApplySelectedParetoPoint: () -> Unit,
+    onResetParetoSelection: () -> Unit,
     onToggleShowContours: () -> Unit,
     onToggleShowDeltaView: () -> Unit,
     onToggleUseHeatmap: () -> Unit,
@@ -287,15 +374,12 @@ fun ChartsContent(
                         )
                     }
                     val currentW = inputsSnapshot.bonusStdWeight
-                    // Find closest index
-                    var sliderVal = weightValues.indexOfFirst { it >= currentW }.toFloat()
-                    if (sliderVal < 0) sliderVal = (weightValues.size - 1).toFloat()
+                    val sliderVal = chartSliderValueForWeight(currentW)
 
                     Slider(
                         value = sliderVal,
                         onValueChange = { 
-                            val idx = it.roundToInt().coerceIn(0, weightValues.size - 1)
-                            val newW = weightValues[idx]
+                            val newW = chartWeightFromSliderValue(it)
                             if (newW != currentW) {
                                 onWeightChange(newW)
                             }
@@ -303,9 +387,14 @@ fun ChartsContent(
                         onValueChangeFinished = {
                             onWeightChangeFinished()
                         },
-                        valueRange = 0f..(weightValues.size - 1).toFloat(),
-                        steps = if (weightValues.size > 2) weightValues.size - 2 else 0,
+                        valueRange = 0f..1f,
+                        steps = 0,
                         modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = stringResource(R.string.charts_weight_release_reopt_note),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                     if (isOptimizing) {
                          Row(verticalAlignment = Alignment.CenterVertically) {
@@ -316,14 +405,14 @@ fun ChartsContent(
                     } else if (optimalObjW > 0.0) {
                          Column {
                              paretoFrontResult?.let { front ->
-                                 if (optimizationMode == OptimizationMode.BEST_COMPROMISE && front.selectedCompromise != null) {
+                                 if (optimizationMode == OptimizationMode.PARETO_KNEE && front.referencePoint != null) {
                                      Text(
                                          text = stringResource(
-                                             R.string.charts_best_compromise_summary,
+                                             R.string.charts_pareto_knee_summary,
                                              front.points.size,
-                                             front.selectedCompromise!!.compromiseScore ?: 0.0,
-                                             front.selectedCompromise!!.avgUtility,
-                                             front.selectedCompromise!!.stdDevUtility
+                                             front.referencePoint!!.kneeScore ?: 0.0,
+                                             front.referencePoint!!.avgUtility,
+                                             front.referencePoint!!.stdDevUtility
                                          ),
                                          style = MaterialTheme.typography.labelMedium,
                                          color = MaterialTheme.colorScheme.primary
@@ -359,6 +448,17 @@ fun ChartsContent(
                          }
                     }
                 }
+            }
+
+            paretoFrontResult?.takeIf { it.points.isNotEmpty() }?.let { front ->
+                ParetoChartSection(
+                    front = front,
+                    chartModel = paretoChartModel,
+                    selectedPoint = selectedParetoPoint,
+                    onSelectPoint = onSelectParetoPoint,
+                    onApplySelected = onApplySelectedParetoPoint,
+                    onResetSelection = onResetParetoSelection
+                )
             }
 
             // 2D/3D Toggle
@@ -468,6 +568,196 @@ fun ChartsContent(
             
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+private fun ParetoChartSection(
+    front: ParetoFrontResult,
+    chartModel: ParetoChartModel,
+    selectedPoint: ParetoPoint?,
+    onSelectPoint: (ParetoPoint) -> Unit,
+    onApplySelected: () -> Unit,
+    onResetSelection: () -> Unit
+) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.pareto_chart_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.pareto_chart_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            ParetoScatterPlot(
+                chartModel = chartModel,
+                onPointSelected = onSelectPoint
+            )
+            ParetoSelectedPointCard(
+                selectedPoint = selectedPoint,
+                front = front,
+                chartModel = chartModel
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onApplySelected,
+                    enabled = selectedPoint != null,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.pareto_apply_selected))
+                }
+                OutlinedButton(
+                    onClick = onResetSelection,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.pareto_reset_selection))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ParetoScatterPlot(
+    chartModel: ParetoChartModel,
+    onPointSelected: (ParetoPoint) -> Unit
+) {
+    val frontTrace = stringResource(R.string.pareto_trace_front)
+    val referenceTrace = stringResource(R.string.pareto_trace_reference)
+    val appliedTrace = stringResource(R.string.pareto_trace_applied)
+    val selectedTrace = stringResource(R.string.pareto_trace_selected)
+    val axisStdDev = stringResource(R.string.pareto_axis_stddev)
+    val axisAvgUtility = stringResource(R.string.pareto_axis_avg_utility)
+    val specJson = remember(chartModel, frontTrace, referenceTrace, appliedTrace, selectedTrace, axisStdDev, axisAvgUtility) {
+        val traces = buildList {
+            add(
+                PlotlySpecBuilder.LineTraceSpec(
+                    name = frontTrace,
+                    x = chartModel.basePoints.map { it.x },
+                    y = chartModel.basePoints.map { it.y },
+                    color = "#90A4AE",
+                    pointColor = "#CFD8DC"
+                )
+            )
+            chartModel.referenceMarker?.let {
+                add(
+                    PlotlySpecBuilder.LineTraceSpec(
+                        name = referenceTrace,
+                        x = listOf(it.x),
+                        y = listOf(it.y),
+                        color = "#7C4DFF",
+                        pointColor = "#7C4DFF"
+                    )
+                )
+            }
+            chartModel.appliedMarker?.let {
+                add(
+                    PlotlySpecBuilder.LineTraceSpec(
+                        name = appliedTrace,
+                        x = listOf(it.x),
+                        y = listOf(it.y),
+                        color = "#FF9800",
+                        pointColor = "#FF9800"
+                    )
+                )
+            }
+            chartModel.selectedMarker?.let {
+                add(
+                    PlotlySpecBuilder.LineTraceSpec(
+                        name = selectedTrace,
+                        x = listOf(it.x),
+                        y = listOf(it.y),
+                        color = ChartP1Hex,
+                        pointColor = ChartP1Hex
+                    )
+                )
+            }
+        }
+
+        PlotlySpecBuilder.buildMultiLineJson(
+            traces = traces,
+            title = "",
+            axisXTitle = axisStdDev,
+            axisYTitle = axisAvgUtility,
+            xRange = null,
+            yRange = null,
+            fixedRange = false,
+            meta = mapOf(
+                "pointSelection" to true,
+                "displayModeBar" to false
+            )
+        )
+    }
+
+    PlotlyWebView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(360.dp),
+        specJson = specJson,
+        isPerspective = false,
+        onPointSelected = { traceName, pointIndex ->
+            val point = when (traceName) {
+                frontTrace -> chartModel.basePoints.getOrNull(pointIndex)?.point
+                referenceTrace -> chartModel.referenceMarker?.point
+                appliedTrace -> chartModel.appliedMarker?.point
+                selectedTrace -> chartModel.selectedMarker?.point
+                else -> null
+            }
+            point?.let(onPointSelected)
+        }
+    )
+}
+
+@Composable
+private fun ParetoSelectedPointCard(
+    selectedPoint: ParetoPoint?,
+    front: ParetoFrontResult,
+    chartModel: ParetoChartModel
+) {
+    val point = selectedPoint ?: front.referencePoint ?: return
+    val isReference = point.params == front.referencePoint?.params
+    val isApplied = point.params == chartModel.appliedMarker?.point?.params
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = stringResource(
+                R.string.pareto_selected_point_params,
+                point.params.p1,
+                point.params.p2,
+                point.params.p3,
+                point.params.p4
+            ),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            text = stringResource(
+                R.string.pareto_selected_point_metrics,
+                point.avgUtility,
+                point.stdDevUtility,
+                point.finalCapital,
+                point.legacyGap
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = stringResource(
+                R.string.pareto_selected_point_flags,
+                if (isReference) stringResource(R.string.pareto_flag_yes) else stringResource(R.string.pareto_flag_no),
+                if (isApplied) stringResource(R.string.pareto_flag_yes) else stringResource(R.string.pareto_flag_no),
+                if (selectedPoint?.params == point.params) stringResource(R.string.pareto_flag_yes) else stringResource(R.string.pareto_flag_no)
+            ),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.tertiary
+        )
     }
 }
 
@@ -586,15 +876,16 @@ fun ChartsContentPreview() {
         p3p4State = ChartUiState(isLoading = false),
         inputsSnapshot = FinancialInput(),
         isComparing = false,
-        optimizationMode = OptimizationMode.BEST_COMPROMISE,
+        optimizationMode = OptimizationMode.TRUE_SCALAR,
         paretoFrontResult = null,
+        selectedParetoPoint = null,
+        paretoChartModel = ParetoChartModelBuilder.build(emptyList(), null, null, null),
         profile1Name = "Profile 1",
         profile2Name = null,
         isOptimizing = false,
         optimalObjW = 0.5,
         optimalObj0 = 0.8,
         optimalStabilityIndex = 0.9,
-        weightValues = listOf(0.0, 1.0, 2.0),
         showContours = true,
         showDeltaView = false,
         useHeatmap = false,
@@ -604,6 +895,9 @@ fun ChartsContentPreview() {
         onBack = {},
         onWeightChange = {},
         onWeightChangeFinished = {},
+        onSelectParetoPoint = {},
+        onApplySelectedParetoPoint = {},
+        onResetParetoSelection = {},
         onToggleShowContours = {},
         onToggleShowDeltaView = {},
         onToggleUseHeatmap = {},

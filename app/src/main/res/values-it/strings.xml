@@ -170,18 +170,23 @@
     <string name="go_back">Torna Indietro</string>
     <string name="optimization_parameters_group">Parametri di Ottimizzazione</string>
     <string name="optimization_mode_title">Modalità di ottimizzazione</string>
-    <string name="optimization_mode_best_compromise">Miglior compromesso</string>
+    <string name="optimization_mode_true_scalar">True Scalar</string>
+    <string name="optimization_mode_pareto_knee">Pareto Knee</string>
     <string name="optimization_mode_pareto_front">Frontiera di Pareto</string>
-    <string name="optimization_mode_best_compromise_desc">Applica automaticamente un piano Pareto-ottimo bilanciato.</string>
-    <string name="optimization_mode_pareto_front_desc">Calcola l\'intero insieme fattibile non dominato senza sovrascrivere i parametri correnti.</string>
-    <string name="optimization_mode_best_compromise_definition">Regola di selezione: scegli il piano Pareto-ottimo più vicino al punto ideale normalizzato tramite ASF aumentata.</string>
-    <string name="optimization_mode_pareto_front_definition">Regola di Pareto: mantieni tutti i piani fattibili non dominati che massimizzano Utilità Media e minimizzano Deviazione Standard.</string>
-    <string name="optimization_mode_compromise_summary">Miglior compromesso selezionato da %1$d punti di Pareto.\nPunteggio compromesso: %2$.4f\nParametri applicati: P1=%3$.4f P2=%4$d P3=%5$.4f P4=%6$d</string>
+    <string name="optimization_mode_true_scalar_desc">Ottimizza direttamente la funzione scalare fobj su P1-P4 e applica il risultato.</string>
+    <string name="optimization_mode_pareto_knee_desc">Applica automaticamente il knee point della frontiera di Pareto, indipendente da w.</string>
+    <string name="optimization_mode_pareto_front_desc">Calcola l\'intero insieme fattibile non dominato e applica il knee di riferimento Pareto corrente.</string>
+    <string name="optimization_mode_true_scalar_definition">Regola scalare: massimizza direttamente la fobj corrente sui P1-P4 fattibili per il w selezionato.</string>
+    <string name="optimization_mode_pareto_knee_definition">Regola di selezione: scegli il knee di Pareto, cioè il punto della frontiera più distante dalla corda che unisce i due estremi nello spazio obiettivo dopo normalizzazione.</string>
+    <string name="optimization_mode_pareto_front_definition">Regola di Pareto: mantieni tutti i piani fattibili non dominati che massimizzano Utilità Media e minimizzano Deviazione Standard, poi usa il knee come piano di riferimento predefinito.</string>
+    <string name="optimization_mode_true_scalar_summary">Ottimo true scalar applicato.\nParametri: P1=%1$.4f P2=%2$d P3=%3$.4f P4=%4$d\nPunteggio scalare F(w): %5$.4f | w=%6$.2f</string>
+    <string name="optimization_mode_pareto_knee_summary">Pareto knee selezionato da %1$d punti di Pareto.\nKnee score: %2$.4f\nParametri applicati: P1=%3$.4f P2=%4$d P3=%5$.4f P4=%6$d</string>
     <string name="optimization_mode_pareto_summary">Frontiera di Pareto calcolata con %1$d piani fattibili non dominati.</string>
-    <string name="pareto_reference_compromise">Compromesso di riferimento dalla frontiera: punteggio %1$.4f | P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
+    <string name="optimization_mode_pareto_summary_applied">Frontiera di Pareto calcolata con %1$d piani fattibili non dominati.\nPiano di riferimento applicato: P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
+    <string name="pareto_reference_knee">Knee di riferimento dalla frontiera: punteggio %1$.4f | P1=%2$.4f P2=%3$d P3=%4$.4f P4=%5$d</string>
     <string name="pareto_front_ideal_summary">Ideali della frontiera: Utilità Media %1$.4f | Dev. Std. %2$.4f</string>
     <string name="pareto_front_points_label">Punti della frontiera di Pareto</string>
-    <string name="pareto_compromise_score_label">Punteggio compromesso di riferimento</string>
+    <string name="pareto_knee_score_label">Punteggio knee di riferimento</string>
     <string name="result_feasibility">Fattibilità</string>
     <string name="result_feasible">Fattibile</string>
     <string name="result_infeasible">Non fattibile</string>
@@ -249,11 +254,12 @@
     <string name="copy">Copia</string>
     <string name="clear">Pulisci</string>
     <string name="charts_interactive_weight">Peso Minim. Dev. Std. (w): %1$.2f</string>
+    <string name="charts_weight_release_reopt_note">Le modifiche a w aggiornano i marker di ottimizzazione al rilascio dello slider.</string>
     <string name="charts_optimizing_params">Ottimizzazione parametri in corso…</string>
     <string name="charts_optimal_f_results">F(w) Ottimale = %1$.3f | F(0) = %2$.3f</string>
     <string name="charts_stability_index_value">Indice Stabilità: %1$.2f (1 significa ottimizzazione bilanciata tra fobj e piccola dev std)</string>
     <string name="charts_fobj_formula">Formula scalare esplorativa: fobj = (UtilitàMedia + (w/100) * (UtilitàMedia / DevStd)) / (1 + w/100)</string>
-    <string name="charts_best_compromise_summary">Modalità miglior compromesso: selezionato da %1$d punti di Pareto | punteggio %2$.4f | UtilitàMedia %3$.4f | DevStd %4$.4f</string>
+    <string name="charts_pareto_knee_summary">Modalità Pareto compromise: selezionato da %1$d punti di Pareto | punteggio %2$.4f | UtilitàMedia %3$.4f | DevStd %4$.4f</string>
     <string name="charts_pareto_front_summary">Modalità frontiera di Pareto: %1$d piani fattibili non dominati | ideale UtilitàMedia %2$.4f | ideale DevStd %3$.4f</string>
     <string name="charts_switch_3d">Passa a 3D</string>
     <string name="charts_switch_2d">Passa a 2D</string>
@@ -311,6 +317,25 @@
     <string name="delta_results_title">Risultati Delta (Profilo 2 - Profilo 1)</string>
     <string name="optimal_point_p1">Ottimo P1</string>
     <string name="optimal_point_p2">Ottimo P2</string>
+    <string name="chart_marker_current_inputs">Input correnti</string>
+    <string name="chart_marker_true_scalar">True Scalar</string>
+    <string name="chart_marker_pareto_knee">Pareto Knee</string>
+    <string name="chart_marker_pareto_reference">Riferimento Pareto</string>
+    <string name="pareto_chart_title">Esploratore Frontiera di Pareto</string>
+    <string name="pareto_chart_subtitle">Ispeziona la frontiera fattibile dei trade-off nello spazio obiettivi. Clicca un punto per analizzarlo, poi applicalo in modo esplicito se vuoi.</string>
+    <string name="pareto_apply_selected">Applica punto Pareto selezionato</string>
+    <string name="pareto_reset_selection">Reset selezione al riferimento</string>
+    <string name="pareto_trace_front">Frontiera di Pareto</string>
+    <string name="pareto_trace_reference">Riferimento</string>
+    <string name="pareto_trace_applied">Applicato</string>
+    <string name="pareto_trace_selected">Selezionato</string>
+    <string name="pareto_axis_stddev">DevStdUtilità</string>
+    <string name="pareto_axis_avg_utility">UtilitàMedia</string>
+    <string name="pareto_selected_point_params">P1=%1$.4f P2=%2$d P3=%3$.4f P4=%4$d</string>
+    <string name="pareto_selected_point_metrics">Utilità Media %1$.4f | Dev Std %2$.4f | Capitale Finale %3$.2f | Gap Legacy %4$.2f</string>
+    <string name="pareto_selected_point_flags">Riferimento: %1$s | Applicato: %2$s | Selezionato: %3$s</string>
+    <string name="pareto_flag_yes">sì</string>
+    <string name="pareto_flag_no">no</string>
     <string name="delta_fobj">Δ F(w): %1$+.4f</string>
     <string name="delta_avg_utility">Δ Utilità Media: %1$+.4f</string>
     <string name="delta_std_dev">Δ Dev. Std.: %1$+.4f</string>
