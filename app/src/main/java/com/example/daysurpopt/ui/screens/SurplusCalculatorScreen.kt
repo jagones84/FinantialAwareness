@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +15,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.daysurpopt.R
-import com.example.daysurpopt.data.SurplusDataRepository
 import com.example.daysurpopt.domain.SurplusInput
 import com.example.daysurpopt.domain.SurplusInputUI
 import com.example.daysurpopt.ui.common.DeltaInputField
@@ -36,7 +35,7 @@ fun SurplusCalculatorScreen(
     viewModel: FinancialViewModel
 ) {
     val surplusInput = viewModel.surplusData
-    var uiSurplusInput by remember { mutableStateOf(SurplusInputUI.from(surplusInput)) }
+    var uiSurplusInput by remember(surplusInput) { mutableStateOf(SurplusInputUI.from(surplusInput)) }
 
     // Comparison data
     val isComparing = viewModel.compareState.isComparing
@@ -162,7 +161,7 @@ fun SurplusCalculatorContent(
                 title = { Text(stringResource(R.string.daily_surplus_calculator_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.save_and_return))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.save_and_return))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(

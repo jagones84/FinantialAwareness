@@ -194,13 +194,10 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable("agent") {
-                                val context = androidx.compose.ui.platform.LocalContext.current
-                                // Load surplus data on demand or pass it via ViewModel if available
-                                val surplusData = remember { SurplusDataRepository.loadInputs(context) }
                                 AgentScreen(
                                     inputs = financialViewModel.inputs,
                                     specificExpenses = financialViewModel.specificExpenses,
-                                    surplusData = surplusData,
+                                    surplusData = financialViewModel.surplusData,
                                     onBack = { navController.popBackStack() }
                                 )
                             }
@@ -246,5 +243,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 

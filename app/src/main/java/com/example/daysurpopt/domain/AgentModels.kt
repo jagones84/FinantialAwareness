@@ -7,7 +7,7 @@ package com.example.daysurpopt.domain
  */
 data class AgentSettings(
     val apiKey: String = "",
-    val model: String = "x-ai/grok-4.1-fast",
+    val model: String = "qwen/qwen3.7-plus",
     val showThinking: Boolean = true
 )
 

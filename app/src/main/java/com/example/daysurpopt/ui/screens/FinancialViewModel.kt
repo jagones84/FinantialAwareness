@@ -49,7 +49,6 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                 }
                 
                 // Trigger calculation and wait
-                val surplusData = SurplusDataRepository.loadInputs(context)
                 val (objective, results) = withContext(Dispatchers.Default) {
                     calculateSimulationWithWeight(inputs.copy(), specificExpenses, surplusData)
                 }
@@ -79,7 +78,6 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                 withContext(Dispatchers.Main) {
                     Toast.makeText(activityContext, activityContext.getString(R.string.pdf_generating_ai), Toast.LENGTH_LONG).show()
                 }
-                val surplusData = SurplusDataRepository.loadInputs(context)
                 aiComment = fetchFullAiReport(
                     agentSettings, 
                     inputs, 
@@ -362,10 +360,9 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         // Load surplus summary
-        val surplusInput = SurplusDataRepository.loadInputs(context)
-        surplusLavorativaMedia = surplusInput.calculateSurplusGiornalieroMedioLavorativa()
-        surplusPensioneMedia = surplusInput.calculateSurplusGiornalieroMedioPensione()
-        mutuoFinoEta = surplusInput.mutuoAffittoFinoEta
+        surplusLavorativaMedia = surplusData.calculateSurplusGiornalieroMedioLavorativa()
+        surplusPensioneMedia = surplusData.calculateSurplusGiornalieroMedioPensione()
+        mutuoFinoEta = surplusData.mutuoAffittoFinoEta
 
         // Restore Compare State if exists
         viewModelScope.launch {
@@ -418,8 +415,6 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
             optimizationResult = null
             
             val cfg = OptimizationLogic.parseGaConfig(gaUI, inputs)
-            val surplusData = SurplusDataRepository.loadInputs(context)
-            
             val gaRes = withContext(Dispatchers.Default) { 
                 OptimizationLogic.optimizeParameters(inputs, cfg, specificExpenses, surplusData) 
             }
@@ -479,7 +474,6 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun runSimulation() {
         viewModelScope.launch {
-            val surplusData = SurplusDataRepository.loadInputs(context)
             val (objective, results) = withContext(Dispatchers.Default) {
                 calculateSimulationWithWeight(
                     inputs.copy(),
@@ -509,7 +503,6 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
             sensitivityMessageResId = R.string.analysis_in_progress
             sensitivityResults = null
             
-            val surplusData = SurplusDataRepository.loadInputs(context)
             val results = withContext(Dispatchers.Default) {
                 OptimizationLogic.runSensitivityAnalysis(
                     inputs,
@@ -521,7 +514,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
             sensitivityMessageResId = null
             
             // If in compare mode, recompute sensitivity deltas
-            if (compareState.isComparing && profile2SensitivityResults != null && results != null) {
+            if (compareState.isComparing && profile2SensitivityResults != null) {
                 deltaSensitivityResults = DeltaCalculator.computeDeltaSensitivity(
                     results,
                     profile2SensitivityResults!!
@@ -557,10 +550,9 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     }
     
     fun refreshSurplusData() {
-        val surplusInput = SurplusDataRepository.loadInputs(context)
-        surplusLavorativaMedia = surplusInput.calculateSurplusGiornalieroMedioLavorativa()
-        surplusPensioneMedia = surplusInput.calculateSurplusGiornalieroMedioPensione()
-        mutuoFinoEta = surplusInput.mutuoAffittoFinoEta
+        surplusLavorativaMedia = surplusData.calculateSurplusGiornalieroMedioLavorativa()
+        surplusPensioneMedia = surplusData.calculateSurplusGiornalieroMedioPensione()
+        mutuoFinoEta = surplusData.mutuoAffittoFinoEta
     }
 
     fun resetInputs() {
@@ -571,6 +563,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
             minRange = "0.0;${defaultFinancialInputs.etaAttuale};0.0;${defaultFinancialInputs.etaAttuale}"
         )
         val defaultSurplus = SurplusInput()
+        surplusData = defaultSurplus
         SurplusDataRepository.saveInputs(context, defaultSurplus)
         refreshSurplusData()
         SpecificExpensesRepository.saveExpenses(context, List(10) { SpecificExpense() })
@@ -580,16 +573,17 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun loadProfile(profile: FullProfile) {
-        val normalized = profile.financialInput.withDefaultAssumptionCurves()
-        FinancialDataRepository.saveInputs(context, normalized)
-        SurplusDataRepository.saveInputs(context, profile.surplusInput)
-        SpecificExpensesRepository.saveExpenses(context, profile.specificExpenses)
-        GaConfigRepository.saveConfig(context, profile.gaConfig)
+        val restoredState = ProfileStateMapper.restoreLoadedProfile(profile)
+        FinancialDataRepository.saveInputs(context, restoredState.financialInput)
+        SurplusDataRepository.saveInputs(context, restoredState.surplusInput)
+        SpecificExpensesRepository.saveExpenses(context, restoredState.specificExpenses)
+        GaConfigRepository.saveConfig(context, restoredState.gaConfig)
 
-        inputs = normalized
-        uiInputs = FinancialInputUI.from(normalized)
-        gaUI = profile.gaConfig
-        specificExpenses = profile.specificExpenses
+        inputs = restoredState.financialInput
+        uiInputs = restoredState.uiInputs
+        gaUI = restoredState.gaConfig
+        specificExpenses = restoredState.specificExpenses
+        surplusData = restoredState.surplusInput
         refreshSurplusData()
     }
 
@@ -602,10 +596,9 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun saveProfile(name: String) {
-        val surplus = SurplusDataRepository.loadInputs(context)
-        val fullProfile = FullProfile(
+        val fullProfile = ProfileStateMapper.createFullProfile(
             financialInput = inputs,
-            surplusInput = surplus,
+            surplusInput = surplusData,
             specificExpenses = specificExpenses,
             gaConfig = gaUI
         )

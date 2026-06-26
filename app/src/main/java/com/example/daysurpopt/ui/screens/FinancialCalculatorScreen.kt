@@ -214,10 +214,6 @@ fun FinancialCalculatorContent(
             // Section 1: Data Input & Setup
             MainSectionCard(title = stringResource(R.string.section_data_input)) {
                 MenuButton(
-                    onClick = { onNavigate("surplusCalculator") },
-                    text = stringResource(R.string.surplus_calculation)
-                )
-                MenuButton(
                     onClick = { onNavigate("userData") },
                     text = stringResource(R.string.user_data_button)
                 )
@@ -229,11 +225,6 @@ fun FinancialCalculatorContent(
 
             // Section 2: Optimization Configuration
             MainSectionCard(title = stringResource(R.string.section_optimization_config)) {
-
-                MenuButton(
-                    onClick = { onNavigate("assumptions") },
-                    text = stringResource(R.string.model_assumptions)
-                )
                 MenuButton(
                     onClick = { onNavigate("gaConfig") },
                     text = stringResource(R.string.genetic_algorithm_parameters)
@@ -273,11 +264,6 @@ fun FinancialCalculatorContent(
                     Text(stringResource(R.string.calculate_simulation_with_inputs))
                 }
 
-                MenuButton(
-                    onClick = { onNavigate("charts") },
-                    text = stringResource(R.string.open_charts)
-                )
-                
                 OutlinedButton(
                     onClick = onRunSensitivityAnalysis,
                     modifier = Modifier.fillMaxWidth(),
