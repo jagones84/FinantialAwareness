@@ -61,7 +61,10 @@ object PromptConstructor {
                - You MUST first call `GET_FINANCIAL_CONTEXT` to see the current value (e.g., `eredita: 50000`).
                - Then, calculate the new absolute value (50000 + 10000 = 60000).
                - Finally, call `RUN_SIMULATION` or `RUN_OPTIMIZATION` with the absolute value.
-            8. **Simulation vs Optimization Workflow**:
+            8. **Weight Handling**:
+               - `bonusStdWeight` is the app's direct stability weight `w`.
+               - Do not use P3 as a proxy for bonusStdWeight when the user is asking about `w`.
+            9. **Simulation vs Optimization Workflow**:
                - **Simple Simulation**: If the user changes an input (e.g., "What if interest rate is 4%?") WITHOUT explicitly asking to re-optimize, use `RUN_SIMULATION` with the new value. This keeps the current strategy (P1-P4) fixed.
                - **Optimization**: If the user asks to "optimize" or "find best plan" with a new input (e.g., "Find best plan if interest is 4%"), use `RUN_OPTIMIZATION`.
                - **Ambiguity**: If the user's intent is unclear (e.g., "Analyze with 4% interest"), ask them if they want to:
@@ -84,6 +87,7 @@ object PromptConstructor {
               - `etaAttuale`, `etaPensione`, `etaRicevimentoEredita`, `etaMorte`
               - `p1SavingRatioSurplus`, `p2EtaFineRisparmioNoCapitale`
               - `p3PercentualeCapitaleDaSpendereAnnualmente`, `p4EtaAnticipataInizioSpesaCapitale`
+              - `bonusStdWeight` (Stability Weight, w)
               - `utilityCurvePoints`: List of {x, y} points (e.g., `[{"x":0.0,"y":0.0}, {"x":100.0,"y":1.0}]`)
               - `degradationCurvePoints`: List of {x, y} points
               
@@ -97,7 +101,7 @@ object PromptConstructor {
               Allowed params (Una Tantum):
               - `specificExpenses`: List of {age, amount, utilityOffset} (e.g., `[{"age":40, "amount":10000.0, "utilityOffset":0.0}]`)
 
-            - `RUN_OPTIMIZATION {param: value}`: Run GA + Coordinate Search to find best parameters. Supports same overrides as simulation.
+            - `RUN_OPTIMIZATION {param: value}`: Run GA + Coordinate Search to find best parameters. Supports same overrides as simulation. `bonusStdWeight` is allowed as a fixed scenario input, but the optimizer still searches only `P1..P4`.
             - `RUN_MULTI_AGENT_ANALYSIS`: Launch the 3+1 agent parallel workflow for deep reporting.
             - `WEB_SEARCH {query: "..."}`: Search online.
             - `GET_TIME`: Get current time.

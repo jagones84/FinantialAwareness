@@ -50,6 +50,7 @@ object AgentPrompts {
             **Context**:
             - Weight (w): ${baseInputs.bonusStdWeight}
             - Stability Index definition: StdDev / (Weight/100).
+            - Objective stability reward term: AvgUtility / StdDev.
             $commonFinancialContext
             $comparisonContext
             

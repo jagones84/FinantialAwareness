@@ -167,7 +167,7 @@ object AgentToolExecutor {
                 calculateSimulationWithWeight(modifiedInputs, modifiedSpecificExpenses, modifiedSurplus)
             }
             val currentStdDev = com.example.daysurpopt.logic.calculateStandardDeviation(currentYears.map { it.funzioneUtilita })
-            val currentStability = if (modifiedInputs.bonusStdWeight != 0.0) currentStdDev / modifiedInputs.bonusStdWeight else 0.0
+            val currentStability = AgentReportFormatter.computeStabilityIndex(currentStdDev, modifiedInputs.bonusStdWeight)
 
             // Create initial guess from current parameters to seed the optimization
             // This ensures the optimization never performs worse than the current strategy
@@ -196,7 +196,7 @@ object AgentToolExecutor {
                 calculateSimulationWithWeight(optInputs, modifiedSpecificExpenses, modifiedSurplus)
             }
             val optStdDev = com.example.daysurpopt.logic.calculateStandardDeviation(optYears.map { it.funzioneUtilita })
-            val optStability = if (optInputs.bonusStdWeight != 0.0) optStdDev / optInputs.bonusStdWeight else 0.0
+            val optStability = AgentReportFormatter.computeStabilityIndex(optStdDev, optInputs.bonusStdWeight)
             
             val gain = optObj - currentObj
 
