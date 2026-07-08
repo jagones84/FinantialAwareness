@@ -40,6 +40,20 @@ data class OptimizationResult(
     val selectedStdDev: Double? = null
 )
 
+internal data class AnalysisUiState(
+    val objectiveFunctionValue: Double?,
+    val optimizationResult: OptimizationResult?,
+    val paretoFrontResult: ParetoFrontResult?,
+    val selectedParetoPoint: ParetoPoint?,
+    val appliedParetoSnapshot: OptimizationMarkerSnapshot?,
+    val lastTrueScalarSnapshot: OptimizationMarkerSnapshot?,
+    val lastParetoCompromiseSnapshot: OptimizationMarkerSnapshot?,
+    val lastParetoReferenceSnapshot: OptimizationMarkerSnapshot?,
+    val simulationResultsCount: Int,
+    val sensitivityResultsCount: Int,
+    val currentWeight: Double = 0.0
+)
+
 internal fun applyOptimizationParamsForTest(
     baseInputs: FinancialInput,
     point: ParetoPoint
@@ -82,6 +96,21 @@ internal fun applyChartWeightUpdateForTest(
 ): Pair<FinancialInput, FinancialInputUI> {
     val updatedInputs = currentInputs.copy(bonusStdWeight = newWeight)
     return updatedInputs to FinancialInputUI.from(updatedInputs)
+}
+
+internal fun clearAnalysisStateForTest(state: AnalysisUiState): AnalysisUiState {
+    return state.copy(
+        objectiveFunctionValue = null,
+        optimizationResult = null,
+        paretoFrontResult = null,
+        selectedParetoPoint = null,
+        appliedParetoSnapshot = null,
+        lastTrueScalarSnapshot = null,
+        lastParetoCompromiseSnapshot = null,
+        lastParetoReferenceSnapshot = null,
+        simulationResultsCount = 0,
+        sensitivityResultsCount = 0
+    )
 }
 
 internal fun defaultOptimizationModeForTest(): OptimizationMode {
@@ -537,6 +566,45 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         optimizationResult = null
     }
 
+    fun clearAnalysisState() {
+        val clearedState = clearAnalysisStateForTest(
+            AnalysisUiState(
+                objectiveFunctionValue = objectiveFunctionValue,
+                optimizationResult = optimizationResult,
+                paretoFrontResult = paretoFrontResult,
+                selectedParetoPoint = selectedParetoPoint,
+                appliedParetoSnapshot = appliedParetoSnapshot,
+                lastTrueScalarSnapshot = lastTrueScalarSnapshot,
+                lastParetoCompromiseSnapshot = lastParetoCompromiseSnapshot,
+                lastParetoReferenceSnapshot = lastParetoReferenceSnapshot,
+                simulationResultsCount = simulationResults.size,
+                sensitivityResultsCount = sensitivityResults?.size ?: 0,
+                currentWeight = inputs.bonusStdWeight
+            )
+        )
+
+        objectiveFunctionValue = clearedState.objectiveFunctionValue
+        optimizationResult = clearedState.optimizationResult
+        paretoFrontResult = clearedState.paretoFrontResult
+        selectedParetoPoint = clearedState.selectedParetoPoint
+        appliedParetoSnapshot = clearedState.appliedParetoSnapshot
+        lastTrueScalarSnapshot = clearedState.lastTrueScalarSnapshot
+        lastParetoCompromiseSnapshot = clearedState.lastParetoCompromiseSnapshot
+        lastParetoReferenceSnapshot = clearedState.lastParetoReferenceSnapshot
+
+        objectiveResults = null
+        simulationResults = emptyList()
+        sensitivityResults = null
+        sensitivityMessageResId = null
+
+        profile2ObjectiveResults = null
+        profile2SimulationResults = emptyList()
+        profile2SensitivityResults = null
+        deltaObjectiveResults = null
+        deltaSimulationResults = emptyList()
+        deltaSensitivityResults = null
+    }
+
     fun runOptimization() {
         viewModelScope.launch {
             optimizing = true
@@ -720,7 +788,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun runTrueScalarOptimization() {
         val scalarConfig = OptimizationLogic.parseGaConfig(gaUI, inputs).copy(maximize = true)
-        val scalarResult = withContext(Dispatchers.Default) {
+        val gaResult = withContext(Dispatchers.Default) {
             OptimizationLogic.optimizeParameters(
                 baseInputs = inputs,
                 config = scalarConfig,
@@ -733,6 +801,20 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                     inputs.p4EtaAnticipataInizioSpesaCapitale
                 )
             )
+        }
+        val refinedResult = withContext(Dispatchers.Default) {
+            OptimizationLogic.refineScalarCandidate(
+                baseInputs = inputs,
+                start = gaResult.bestParams,
+                config = scalarConfig,
+                specificExpenses = specificExpenses,
+                surplusData = surplusData
+            )
+        }
+        val scalarResult = if (refinedResult.bestFitness >= gaResult.bestFitness) {
+            refinedResult
+        } else {
+            gaResult
         }
 
         inputs = applyOptimizationParams(inputs, scalarResult.bestParams)

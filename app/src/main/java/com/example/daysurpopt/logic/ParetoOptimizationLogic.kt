@@ -46,7 +46,7 @@ object ParetoOptimizationLogic {
             val years = calculateSimulation(in2, specificExpenses, surplusData)
             val metrics = calculateObjectivesFromYears(
                 years = years,
-                bonusStdWeight = in2.bonusStdWeight,
+                bonusStdWeight = 0.0,
                 legacyTarget = in2.soldiDaConservare
             )
 

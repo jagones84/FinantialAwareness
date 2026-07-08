@@ -233,6 +233,22 @@ object OptimizationLogic {
         )
     }
 
+    fun refineScalarCandidate(
+        baseInputs: FinancialInput,
+        start: ParamsCandidate,
+        config: GAConfig,
+        specificExpenses: List<SpecificExpense>,
+        surplusData: SurplusInput
+    ): OptimizationResult {
+        return coordinateSearch(
+            baseInputs = baseInputs,
+            start = start,
+            config = config.copy(maximize = true),
+            specificExpenses = specificExpenses,
+            surplusData = surplusData
+        )
+    }
+
     fun coordinateSearch(
         baseInputs: FinancialInput,
         start: ParamsCandidate,
@@ -241,84 +257,96 @@ object OptimizationLogic {
         specificExpenses: List<SpecificExpense>,
         surplusData: SurplusInput
     ): OptimizationResult {
+        return refineScalarCandidateForTest(
+            evaluator = { candidate ->
+                val in2 = baseInputs.copy(
+                    p1SavingRatioSurplus = candidate.p1,
+                    p2EtaFineRisparmioNoCapitale = candidate.p2,
+                    p3PercentualeCapitaleDaSpendereAnnualmente = candidate.p3,
+                    p4EtaAnticipataInizioSpesaCapitale = candidate.p4
+                )
+                val (obj, _) = calculateSimulationWithWeight(in2, specificExpenses, surplusData)
+                obj
+            },
+            start = start,
+            config = config,
+            maxIter = maxIter,
+            maximize = config.maximize
+        )
+    }
+}
 
-        fun eval(c: ParamsCandidate): Double {
-            val in2 = baseInputs.copy(
-                p1SavingRatioSurplus = c.p1,
-                p2EtaFineRisparmioNoCapitale = c.p2,
-                p3PercentualeCapitaleDaSpendereAnnualmente = c.p3,
-                p4EtaAnticipataInizioSpesaCapitale = c.p4
-            )
-            val (obj, _) = calculateSimulationWithWeight(in2, specificExpenses, surplusData)
-            return obj
-        }
+internal fun refineScalarCandidateForTest(
+    evaluator: (ParamsCandidate) -> Double,
+    start: ParamsCandidate,
+    config: GAConfig,
+    maxIter: Int = 10,
+    maximize: Boolean
+): OptimizationResult {
+    var currentBest = start
+    var bestFitness = evaluator(currentBest)
+    val history = mutableListOf(1 to bestFitness)
 
-        var currentBest = start
-        var bestFitness = eval(currentBest)
-        val history = mutableListOf(1 to bestFitness)
+    val stepSizesP1 = (0 until maxIter).map { (config.max.p1 - config.min.p1) * 0.5.pow(it + 1) }
+    val stepSizesP2 = (0 until maxIter).map { max(1, ((config.max.p2 - config.min.p2) * 0.5.pow(it + 1)).roundToInt()) }
+    val stepSizesP3 = (0 until maxIter).map { (config.max.p3 - config.min.p3) * 0.5.pow(it + 1) }
+    val stepSizesP4 = (0 until maxIter).map { max(1, ((config.max.p4 - config.min.p4) * 0.5.pow(it + 1)).roundToInt()) }
 
-        val stepSizesP1 = (0 until maxIter).map { (config.max.p1 - config.min.p1) * 0.5.pow(it + 1) }
-        val stepSizesP2 = (0 until maxIter).map { max(1, ((config.max.p2 - config.min.p2) * 0.5.pow(it + 1)).roundToInt()) }
-        val stepSizesP3 = (0 until maxIter).map { (config.max.p3 - config.min.p3) * 0.5.pow(it + 1) }
-        val stepSizesP4 = (0 until maxIter).map { max(1, ((config.max.p4 - config.min.p4) * 0.5.pow(it + 1)).roundToInt()) }
+    fun isBetter(candidateFitness: Double, referenceFitness: Double): Boolean {
+        return if (maximize) candidateFitness > referenceFitness else candidateFitness < referenceFitness
+    }
 
+    for (i in 0 until maxIter) {
+        var improvedInCycle = true
+        while (improvedInCycle) {
+            improvedInCycle = false
 
-        for (i in 0 until maxIter) {
-            var improvedInCycle = true
-            while (improvedInCycle) {
-                improvedInCycle = false
-                
-                // Test P1
-                for (sign in listOf(-1.0, 1.0)) {
-                    val p1 = (currentBest.p1 + sign * stepSizesP1[i]).coerceIn(config.min.p1, config.max.p1)
-                    val candidate = currentBest.copy(p1 = p1)
-                    val fitness = eval(candidate)
-                    if ((config.maximize && fitness > bestFitness) || (!config.maximize && fitness < bestFitness)) {
-                        bestFitness = fitness
-                        currentBest = candidate
-                        improvedInCycle = true
-                    }
-                }
-
-                // Test P2
-                for (sign in listOf(-1, 1)) {
-                    val p2 = (currentBest.p2 + sign * stepSizesP2[i]).coerceIn(config.min.p2, config.max.p2)
-                    val candidate = currentBest.copy(p2 = p2, p4 = max(currentBest.p4, p2))
-                    val fitness = eval(candidate)
-                    if ((config.maximize && fitness > bestFitness) || (!config.maximize && fitness < bestFitness)) {
-                        bestFitness = fitness
-                        currentBest = candidate
-                        improvedInCycle = true
-                    }
-                }
-                
-                // Test P3
-                for (sign in listOf(-1.0, 1.0)) {
-                    val p3 = (currentBest.p3 + sign * stepSizesP3[i]).coerceIn(config.min.p3, config.max.p3)
-                    val candidate = currentBest.copy(p3 = p3)
-                    val fitness = eval(candidate)
-                    if ((config.maximize && fitness > bestFitness) || (!config.maximize && fitness < bestFitness)) {
-                        bestFitness = fitness
-                        currentBest = candidate
-                        improvedInCycle = true
-                    }
-                }
-                
-                // Test P4
-                for (sign in listOf(-1, 1)) {
-                    val p4 = (currentBest.p4 + sign * stepSizesP4[i]).coerceIn(config.min.p4, config.max.p4)
-                    val candidate = currentBest.copy(p4 = max(p4, currentBest.p2))
-                    val fitness = eval(candidate)
-                     if ((config.maximize && fitness > bestFitness) || (!config.maximize && fitness < bestFitness)) {
-                        bestFitness = fitness
-                        currentBest = candidate
-                        improvedInCycle = true
-                    }
+            for (sign in listOf(-1.0, 1.0)) {
+                val p1 = (currentBest.p1 + sign * stepSizesP1[i]).coerceIn(config.min.p1, config.max.p1)
+                val candidate = currentBest.copy(p1 = p1)
+                val fitness = evaluator(candidate)
+                if (isBetter(fitness, bestFitness)) {
+                    bestFitness = fitness
+                    currentBest = candidate
+                    improvedInCycle = true
                 }
             }
-            history.add(i + 2 to bestFitness)
-        }
 
-        return OptimizationResult(currentBest, bestFitness, history)
+            for (sign in listOf(-1, 1)) {
+                val p2 = (currentBest.p2 + sign * stepSizesP2[i]).coerceIn(config.min.p2, config.max.p2)
+                val candidate = currentBest.copy(p2 = p2, p4 = max(currentBest.p4, p2))
+                val fitness = evaluator(candidate)
+                if (isBetter(fitness, bestFitness)) {
+                    bestFitness = fitness
+                    currentBest = candidate
+                    improvedInCycle = true
+                }
+            }
+
+            for (sign in listOf(-1.0, 1.0)) {
+                val p3 = (currentBest.p3 + sign * stepSizesP3[i]).coerceIn(config.min.p3, config.max.p3)
+                val candidate = currentBest.copy(p3 = p3)
+                val fitness = evaluator(candidate)
+                if (isBetter(fitness, bestFitness)) {
+                    bestFitness = fitness
+                    currentBest = candidate
+                    improvedInCycle = true
+                }
+            }
+
+            for (sign in listOf(-1, 1)) {
+                val p4 = (currentBest.p4 + sign * stepSizesP4[i]).coerceIn(config.min.p4, config.max.p4)
+                val candidate = currentBest.copy(p4 = max(p4, currentBest.p2))
+                val fitness = evaluator(candidate)
+                if (isBetter(fitness, bestFitness)) {
+                    bestFitness = fitness
+                    currentBest = candidate
+                    improvedInCycle = true
+                }
+            }
+        }
+        history.add(i + 2 to bestFitness)
     }
+
+    return OptimizationResult(currentBest, bestFitness, history)
 }

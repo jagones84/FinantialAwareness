@@ -2,6 +2,7 @@
     <string name="app_name">Conciencia Financiera</string>
     <string name="financial_calculator_title">Calculadora Financiera Personal</string>
     <string name="reset_inputs">Restablecer Valores</string>
+    <string name="clear_analysis_state">Borrar Resultados del Analisis</string>
     <string name="manage_profiles">Administrar Perfiles</string>
     <string name="surplus_calculation">Calcular Superávit</string>
     <string name="calculated_daily_surplus">Superávit Diario Calculado:</string>

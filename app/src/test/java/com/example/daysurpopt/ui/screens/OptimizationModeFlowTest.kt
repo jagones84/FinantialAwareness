@@ -2,6 +2,10 @@ package com.example.daysurpopt.ui.screens
 
 import com.example.daysurpopt.domain.FinancialInput
 import com.example.daysurpopt.domain.OptimizationMode
+import com.example.daysurpopt.domain.OptimizationMarkerSnapshot
+import com.example.daysurpopt.domain.ParamsCandidate
+import com.example.daysurpopt.domain.ParetoFrontResult
+import com.example.daysurpopt.domain.ParetoPoint
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -70,5 +74,83 @@ class OptimizationModeFlowTest {
     @Test
     fun chartWeightFromSliderValue_roundTrips_exact_weight_without_grid_quantization() {
         assertEquals(0.53, chartWeightFromSliderValue(0.53f), 1e-6)
+    }
+
+    @Test
+    fun clearAnalysisState_resets_results_front_and_markers() {
+        val point = ParetoPoint(
+            params = ParamsCandidate(0.2, 60, 0.3, 65),
+            avgUtility = 0.8,
+            stdDevUtility = 0.2,
+            isFeasible = true,
+            finalCapital = 50000.0,
+            legacyGap = 1000.0
+        )
+        val snapshot = OptimizationMarkerSnapshot(
+            mode = OptimizationMode.PARETO_FRONT,
+            params = point.params,
+            objectiveValue = 1.1,
+            avgUtility = point.avgUtility,
+            stdDevUtility = point.stdDevUtility,
+            stabilityIndex = 0.3,
+            weightUsed = 0.5
+        )
+        val state = AnalysisUiState(
+            objectiveFunctionValue = 1.2,
+            optimizationResult = OptimizationResult(
+                mode = OptimizationMode.TRUE_SCALAR,
+                gaFitness = 1.0,
+                bonusWeight = 0.5,
+                finalFitness = 1.1,
+                p1 = 0.2,
+                p2 = 60,
+                p3 = 0.3,
+                p4 = 65
+            ),
+            paretoFrontResult = ParetoFrontResult(points = listOf(point), referencePoint = point),
+            selectedParetoPoint = point,
+            appliedParetoSnapshot = snapshot,
+            lastTrueScalarSnapshot = snapshot,
+            lastParetoCompromiseSnapshot = snapshot,
+            lastParetoReferenceSnapshot = snapshot,
+            simulationResultsCount = 4,
+            sensitivityResultsCount = 3
+        )
+
+        val cleared = clearAnalysisStateForTest(state)
+
+        assertEquals(null, cleared.objectiveFunctionValue)
+        assertEquals(null, cleared.optimizationResult)
+        assertEquals(null, cleared.paretoFrontResult)
+        assertEquals(null, cleared.selectedParetoPoint)
+        assertEquals(null, cleared.appliedParetoSnapshot)
+        assertEquals(null, cleared.lastTrueScalarSnapshot)
+        assertEquals(null, cleared.lastParetoCompromiseSnapshot)
+        assertEquals(null, cleared.lastParetoReferenceSnapshot)
+        assertEquals(0, cleared.simulationResultsCount)
+        assertEquals(0, cleared.sensitivityResultsCount)
+    }
+
+    @Test
+    fun clearAnalysisState_preserves_current_weight_inputs() {
+        val state = AnalysisUiState(
+            objectiveFunctionValue = 1.2,
+            optimizationResult = null,
+            paretoFrontResult = null,
+            selectedParetoPoint = null,
+            appliedParetoSnapshot = null,
+            lastTrueScalarSnapshot = null,
+            lastParetoCompromiseSnapshot = null,
+            lastParetoReferenceSnapshot = null,
+            simulationResultsCount = 1,
+            sensitivityResultsCount = 1,
+            currentWeight = 0.77
+        )
+
+        val cleared = clearAnalysisStateForTest(state)
+
+        assertEquals(0.77, cleared.currentWeight, 1e-9)
+        assertEquals(0, cleared.simulationResultsCount)
+        assertEquals(0, cleared.sensitivityResultsCount)
     }
 }

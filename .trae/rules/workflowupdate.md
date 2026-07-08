@@ -1,5 +1,5 @@
 # Workflow Update Rule
-* Each completed subtask or end session update F:\MCP\TRADING\WORKFLOW.md, it is the complete detaield description of what the code does.
+* Each completed subtsk or end session update F:\MCP\TRADING\WORKFLOW.md, it is the complete detaield description of what the code does.
 * Sometimes verify entirly file above versus codebase.
 
 # Memories

@@ -87,6 +87,8 @@ fun FinancialCalculatorScreen(
         onRunOptimization = { viewModel.runOptimization() },
         onRunSimulation = { viewModel.runSimulation() },
         onRunSensitivityAnalysis = { viewModel.runSensitivityAnalysis() },
+        onClearAnalysisState = { viewModel.clearAnalysisState() },
+        onResetInputs = { viewModel.resetInputs() },
         onExportPdf = { viewModel.exportPdf(context) },
         onExitCompareMode = { viewModel.exitCompareMode() },
         onLanguageChange = { lang ->
@@ -121,6 +123,8 @@ fun FinancialCalculatorContent(
     onRunOptimization: () -> Unit,
     onRunSimulation: () -> Unit,
     onRunSensitivityAnalysis: () -> Unit,
+    onClearAnalysisState: () -> Unit,
+    onResetInputs: () -> Unit,
     onExportPdf: () -> Unit,
     onExitCompareMode: () -> Unit,
     onLanguageChange: (String) -> Unit
@@ -310,6 +314,22 @@ fun FinancialCalculatorContent(
                     enabled = !optimizing
                 ) {
                     Text(stringResource(R.string.calculate_parameter_sensitivity))
+                }
+
+                OutlinedButton(
+                    onClick = onClearAnalysisState,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !optimizing
+                ) {
+                    Text(stringResource(R.string.clear_analysis_state))
+                }
+
+                OutlinedButton(
+                    onClick = onResetInputs,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !optimizing
+                ) {
+                    Text(stringResource(R.string.reset_inputs))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -803,6 +823,8 @@ fun FinancialCalculatorPreview() {
         onRunOptimization = {},
         onRunSimulation = {},
         onRunSensitivityAnalysis = {},
+        onClearAnalysisState = {},
+        onResetInputs = {},
         onExportPdf = {},
         onExitCompareMode = {},
         onLanguageChange = {}

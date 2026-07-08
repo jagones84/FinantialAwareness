@@ -2,6 +2,7 @@
     <string name="app_name">Personal Financial Awareness</string>
     <string name="financial_calculator_title">Calcolatore Finanziario Personale</string>
     <string name="reset_inputs">Reset Valori</string>
+    <string name="clear_analysis_state">Cancella Risultati Analisi</string>
     <string name="manage_profiles">Gestisci Profili</string>
     <string name="surplus_calculation">Calcola Surplus</string>
     <string name="calculated_daily_surplus">Surplus Giornaliero Calcolato:</string>
