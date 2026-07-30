@@ -1,9 +1,10 @@
 package com.example.daysurpopt.agent
 
+import com.example.daysurpopt.logic.computeStabilityScore
+
 object AgentReportFormatter {
 
-    fun computeStabilityIndex(stdDev: Double, bonusStdWeight: Double): Double {
-        val weight = bonusStdWeight / 100.0
-        return if (weight > 1e-9) stdDev / weight else 0.0
+    fun computeStabilityIndex(avgUtilita: Double, stdDev: Double): Double {
+        return computeStabilityScore(avgUtilita, stdDev)
     }
 }

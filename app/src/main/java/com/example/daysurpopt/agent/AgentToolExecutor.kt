@@ -166,8 +166,12 @@ object AgentToolExecutor {
             val (currentObj, currentYears) = withContext(Dispatchers.Default) {
                 calculateSimulationWithWeight(modifiedInputs, modifiedSpecificExpenses, modifiedSurplus)
             }
-            val currentStdDev = com.example.daysurpopt.logic.calculateStandardDeviation(currentYears.map { it.funzioneUtilita })
-            val currentStability = AgentReportFormatter.computeStabilityIndex(currentStdDev, modifiedInputs.bonusStdWeight)
+            val currentUtilities = currentYears.flatMap { year ->
+                if (year.monthlyUtilitySamples.isNotEmpty()) year.monthlyUtilitySamples else listOf(year.funzioneUtilita)
+            }
+            val currentAvg = currentUtilities.average()
+            val currentStdDev = com.example.daysurpopt.logic.calculateStandardDeviation(currentUtilities)
+            val currentStability = AgentReportFormatter.computeStabilityIndex(currentAvg, currentStdDev)
 
             // Create initial guess from current parameters to seed the optimization
             // This ensures the optimization never performs worse than the current strategy
@@ -195,8 +199,12 @@ object AgentToolExecutor {
             val (optObj, optYears) = withContext(Dispatchers.Default) {
                 calculateSimulationWithWeight(optInputs, modifiedSpecificExpenses, modifiedSurplus)
             }
-            val optStdDev = com.example.daysurpopt.logic.calculateStandardDeviation(optYears.map { it.funzioneUtilita })
-            val optStability = AgentReportFormatter.computeStabilityIndex(optStdDev, optInputs.bonusStdWeight)
+            val optUtilities = optYears.flatMap { year ->
+                if (year.monthlyUtilitySamples.isNotEmpty()) year.monthlyUtilitySamples else listOf(year.funzioneUtilita)
+            }
+            val optAvg = optUtilities.average()
+            val optStdDev = com.example.daysurpopt.logic.calculateStandardDeviation(optUtilities)
+            val optStability = AgentReportFormatter.computeStabilityIndex(optAvg, optStdDev)
             
             val gain = optObj - currentObj
 
@@ -205,7 +213,7 @@ object AgentToolExecutor {
             
             **1. Key Metrics:**
             - **Objective Function**: ${"%.4f".format(currentObj)} -> **${"%.4f".format(optObj)}** (Gain: ${"%+.4f".format(gain)})
-            - **Stability Index**: ${"%.4f".format(currentStability)} -> **${"%.4f".format(optStability)}** (Lower is better)
+            - **Stability Score**: ${"%.4f".format(currentStability)} -> **${"%.4f".format(optStability)}** (Higher is better)
             - **Standard Deviation**: ${"%.4f".format(currentStdDev)} -> **${"%.4f".format(optStdDev)}**
             
             **2. Optimized Parameters:**

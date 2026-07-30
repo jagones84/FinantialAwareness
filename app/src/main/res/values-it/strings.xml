@@ -42,9 +42,9 @@
     <string name="analysis_in_progress">Analisi in corso…</string>
     <string name="impact_on_objective_function">Impatto sulla Funzione Obiettivo:</string>
     <string name="final_objective_function">Funzione Obiettivo Finale: %1$.3f</string>
-    <string name="definition_objective_function">Punteggio scalare corrente del piano mostrato: (UtilitàMedia + (w/100) * (UtilitàMedia/DevStandard)) / (1 + w/100), w=%1$.2f</string>
+    <string name="definition_objective_function">Punteggio scalare corrente del piano mostrato: UtilitàMedia * ((1 - w) + w * PunteggioStabilità), w=%1$.2f</string>
     <string name="definition_std_dev">Definizione: Deviazione Standard dei valori di utilità annuali.</string>
-    <string name="definition_stability_index">Formula: Indice Stabilità = DevStd / (w/100).\n>> 1: w basso, priorità Utilità Media.\n&lt;&lt; 1: w alto, priorità Stabilità.\n~ 1: Bilanciato.</string>
+    <string name="definition_stability_index">Formula: Punteggio Stabilità = UtilitàMedia / (UtilitàMedia + DevStd).\nVicino a 1: utilità più stabile.\nVicino a 0: utilità più volatile.</string>
     <string name="average_utility">Utilità media: %1$.3f</string>
     <string name="std_dev">Deviazione Standard: %1$.3f</string>
     <string name="warning_utility_threshold_not_met">Attenzione: il vincolo di utilità minima non può essere soddisfatto mantenendo il capitale finale. Prova a ridurre la soglia di utilità o la spesa giornaliera per utilità massima.</string>
@@ -258,8 +258,8 @@
     <string name="charts_weight_release_reopt_note">Le modifiche a w aggiornano i marker di ottimizzazione al rilascio dello slider.</string>
     <string name="charts_optimizing_params">Ottimizzazione parametri in corso…</string>
     <string name="charts_optimal_f_results">F(w) Ottimale = %1$.3f | F(0) = %2$.3f</string>
-    <string name="charts_stability_index_value">Indice Stabilità: %1$.2f (1 significa ottimizzazione bilanciata tra fobj e piccola dev std)</string>
-    <string name="charts_fobj_formula">Formula scalare esplorativa: fobj = (UtilitàMedia + (w/100) * (UtilitàMedia / DevStd)) / (1 + w/100)</string>
+    <string name="charts_stability_index_value">Punteggio Stabilità: %1$.2f (più vicino a 1 significa utilità più stabile)</string>
+    <string name="charts_fobj_formula">Formula scalare esplorativa: fobj = UtilitàMedia * ((1 - w) + w * PunteggioStabilità)</string>
     <string name="charts_pareto_knee_summary">Modalità Pareto compromise: selezionato da %1$d punti di Pareto | punteggio %2$.4f | UtilitàMedia %3$.4f | DevStd %4$.4f</string>
     <string name="charts_pareto_front_summary">Modalità frontiera di Pareto: %1$d piani fattibili non dominati | ideale UtilitàMedia %2$.4f | ideale DevStd %3$.4f</string>
     <string name="charts_switch_3d">Passa a 3D</string>

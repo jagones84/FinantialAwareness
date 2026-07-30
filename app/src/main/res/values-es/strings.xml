@@ -55,9 +55,9 @@
     <string name="analysis_in_progress">Análisis en curso…</string>
     <string name="impact_on_objective_function">Impacto en la Función Objetivo:</string>
     <string name="final_objective_function">Función Objetivo Final: %1$.3f</string>
-    <string name="definition_objective_function">Puntuación escalar actual del plan mostrado: (UtilidadMedia + (w/100) * (UtilidadMedia/DesvEst)) / (1 + w/100), w=%1$.2f</string>
+    <string name="definition_objective_function">Puntuación escalar actual del plan mostrado: UtilidadMedia * ((1 - w) + w * PuntuaciónEstabilidad), w=%1$.2f</string>
     <string name="definition_std_dev">Definición: Desviación Estándar de los valores de utilidad anuales.</string>
-    <string name="definition_stability_index">Fórmula: Índice Estabilidad = DesvEst / (w/100).\n>> 1: w bajo, prioridad Utilidad Media.\n&lt;&lt; 1: w alto, prioridad Estabilidad.\n~ 1: Equilibrado.</string>
+    <string name="definition_stability_index">Fórmula: Puntuación de Estabilidad = UtilidadMedia / (UtilidadMedia + DesvEst).\nCerca de 1: utilidad más estable.\nCerca de 0: utilidad más volátil.</string>
     <string name="average_utility">Utilidad Media: %1$.3f</string>
     <string name="std_dev">Desviación Estándar: %1$.3f</string>
     <string name="warning_utility_threshold_not_met">Advertencia: No se puede cumplir la restricción de utilidad mínima conservando el capital final. Intente reducir el umbral de utilidad mínima o el gasto diario para utilidad máxima.</string>
@@ -201,8 +201,8 @@
     <string name="charts_weight_release_reopt_note">Los cambios en w actualizan los marcadores de optimización al soltar el control.</string>
     <string name="charts_optimizing_params">Optimizando parámetros…</string>
     <string name="charts_optimal_f_results">F(w) Óptimo = %1$.3f | F(0) = %2$.3f</string>
-    <string name="charts_stability_index_value">Índice Estabilidad [std / (w/100)]: %1$.2f</string>
-    <string name="charts_fobj_formula">Fórmula escalar de exploración: fobj = (UtilidadMedia + (w/100) * (UtilidadMedia / DesvEst)) / (1 + w/100)</string>
+    <string name="charts_stability_index_value">Puntuación de Estabilidad: %1$.2f</string>
+    <string name="charts_fobj_formula">Fórmula escalar de exploración: fobj = UtilidadMedia * ((1 - w) + w * PuntuaciónEstabilidad)</string>
     <string name="charts_pareto_knee_summary">Modo Pareto compromise: seleccionado entre %1$d puntos de Pareto | puntuación %2$.4f | UtilidadMedia %3$.4f | DesvEst %4$.4f</string>
     <string name="charts_pareto_front_summary">Modo frente de Pareto: %1$d planes factibles no dominados | ideal UtilidadMedia %2$.4f | ideal DesvEst %3$.4f</string>
     <string name="charts_switch_3d">Cambiar a 3D</string>

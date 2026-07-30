@@ -97,7 +97,7 @@ data class FinancialInputUI(
     val p2EtaFineRisparmioNoCapitale: String = "67",
     val p3PercentualeCapitaleDaSpendereAnnualmente: String = "0.0400",
     val p4EtaAnticipataInizioSpesaCapitale: String = "67",
-    val bonusStdWeight: String = "0.50"
+    val bonusStdWeight: String = "0.15"
 ) {
     companion object {
         fun from(inputs: FinancialInput) = FinancialInputUI(

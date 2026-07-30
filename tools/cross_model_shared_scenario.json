@@ -1,0 +1,88 @@
+{
+  "scenario_name": "shared_reference_bounded_objective",
+  "model": {
+    "start_age": 41,
+    "death_age": 82,
+    "retirement_age": 65,
+    "initial_capital_eur": 105000.0,
+    "inheritance_eur": 160000.0,
+    "inheritance_age": 55,
+    "tfr_eur": 100000.0,
+    "tfr_age": 65,
+    "terminal_bequest_eur": 50000.0,
+    "real_annual_return": 0.02,
+    "real_annual_debt_interest": 0.0,
+    "minimum_utility_threshold": 0.0,
+    "days_per_month": 30.4375
+  },
+  "surplus": [
+    {
+      "start_age": 41,
+      "end_age": 55,
+      "monthly_eur": 1257.5
+    },
+    {
+      "start_age": 55,
+      "end_age": 65,
+      "monthly_eur": 957.5
+    },
+    {
+      "start_age": 65,
+      "end_age": 82,
+      "monthly_eur": 18.33
+    }
+  ],
+  "utility_curve": [
+    { "x": 0.0, "y": 0.0 },
+    { "x": 20.0, "y": 0.11 },
+    { "x": 30.0, "y": 0.24 },
+    { "x": 40.0, "y": 0.38 },
+    { "x": 50.0, "y": 0.55 },
+    { "x": 60.0, "y": 0.67 },
+    { "x": 90.0, "y": 0.81 },
+    { "x": 100.0, "y": 0.9 }
+  ],
+  "age_curve": [
+    { "x": 30.0, "y": 1.0 },
+    { "x": 40.0, "y": 0.94 },
+    { "x": 50.0, "y": 0.78 },
+    { "x": 60.0, "y": 0.52 },
+    { "x": 70.0, "y": 0.36 },
+    { "x": 80.0, "y": 0.31 },
+    { "x": 90.0, "y": 0.3 }
+  ],
+  "one_time_expenses": [
+    { "age": 42, "amount": 1500.0, "utility_offset": 0.0 },
+    { "age": 45, "amount": 5000.0, "utility_offset": 0.0 },
+    { "age": 45, "amount": 3000.0, "utility_offset": 0.0 },
+    { "age": 50, "amount": 30000.0, "utility_offset": 0.0 },
+    { "age": 60, "amount": 26000.0, "utility_offset": 0.0 },
+    { "age": 70, "amount": 20000.0, "utility_offset": 0.0 },
+    { "age": 70, "amount": 26000.0, "utility_offset": 0.0 },
+    { "age": 80, "amount": 20000.0, "utility_offset": 0.0 }
+  ],
+  "policy": {
+    "p3": 1.0,
+    "p4_base_age": 47.0
+  },
+  "grid": {
+    "weights": [0.0, 0.15, 1.0, 10.0],
+    "p1_values": [
+      0.0, 0.05, 0.1, 0.15, 0.2,
+      0.25, 0.3, 0.35, 0.4, 0.45,
+      0.5, 0.55, 0.6, 0.65, 0.7,
+      0.75, 0.8, 0.85, 0.9, 0.95,
+      1.0
+    ],
+    "p2_ages": [
+      41, 42, 43, 44, 45,
+      46, 47, 48, 49, 50,
+      51, 52, 53, 54, 55,
+      56, 57, 58, 59, 60,
+      61, 62, 63, 64, 65
+    ]
+  },
+  "numerics": {
+    "std_epsilon": 1e-12
+  }
+}

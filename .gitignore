@@ -22,4 +22,8 @@ keystore.properties
 *.keystore
 .kotlin/
 .agent/
-.trae/memory/
+.trae/
+
+# Local analysis and handoff artifacts
+/NEXT_AGENT_HANDOFF.md
+/*_REPORT.md

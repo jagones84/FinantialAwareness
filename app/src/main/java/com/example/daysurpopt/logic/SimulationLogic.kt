@@ -74,31 +74,48 @@ fun calculateStandardDeviation(numbers: List<Double>): Double {
     return sqrt(variance)
 }
 
-fun funzioneDegradoPerEta(eta: Int): Double {
-    return 0.3 + (1 - 0.3) / (1 + exp(0.15 * (eta - 55)))
+private const val STD_EPSILON = 1e-12
+private const val DAYS_PER_MONTH = 365.25 / 12.0
+
+fun computeStabilityScore(avgUtilita: Double, stdDevUtilita: Double): Double {
+    if (!avgUtilita.isFinite() || avgUtilita <= 0.0) return 0.0
+    if (!stdDevUtilita.isFinite() || stdDevUtilita <= 0.0) return 1.0
+
+    return (avgUtilita / (avgUtilita + stdDevUtilita)).coerceIn(0.0, 1.0)
+}
+
+fun funzioneDegradoPerEta(eta: Double): Double {
+    return 0.3 + (1 - 0.3) / (1 + exp(0.15 * (eta - 55.0)))
 }
 
 fun funzioneDegradoPerEta(eta: Int, inputs: FinancialInput): Double {
+    return funzioneDegradoPerEta(eta.toDouble(), inputs)
+}
+
+fun funzioneDegradoPerEta(eta: Double, inputs: FinancialInput): Double {
     val curve = inputs.degradationCurvePoints?.let(::sortedFiniteCurve)?.takeIf { it.size >= 2 }
     return if (curve != null) {
-        interpolateCurveY(curve, eta.toDouble()).coerceIn(0.0, 1.0)
+        interpolateCurveY(curve, eta).coerceIn(0.0, 1.0)
     } else {
         funzioneDegradoPerEta(eta)
     }
 }
 
 fun utilitaDaSpesa(eta: Int, spesaMensile: Double, inputs: FinancialInput): Double {
-    val daysPerMonth = 365.0 / 12.0
+    return utilitaDaSpesa(eta.toDouble(), spesaMensile, inputs)
+}
+
+fun utilitaDaSpesa(eta: Double, spesaMensile: Double, inputs: FinancialInput): Double {
     val curve = inputs.utilityCurvePoints?.let(::sortedFiniteCurve)?.takeIf { it.size >= 2 }
 
     val uRaw = if (curve != null) {
-        val daily = (spesaMensile / daysPerMonth).coerceAtLeast(0.0)
+        val daily = (spesaMensile / DAYS_PER_MONTH).coerceAtLeast(0.0)
         interpolateCurveY(curve, daily).coerceIn(0.0, 1.0)
     } else {
         val baselineMax = Defaults.BASELINE_MAX_SPESA
         val baselineCenter = Defaults.BASELINE_CENTER
         val baselineK = Defaults.BASELINE_K
-        val target = inputs.valoreSpesaGiornalieraMaxUtilita * daysPerMonth
+        val target = inputs.valoreSpesaGiornalieraMaxUtilita * DAYS_PER_MONTH
         val scale = if (target > 0) target / baselineMax else 1.0
         val x0 = baselineCenter * scale
         val k = baselineK / scale
@@ -111,6 +128,124 @@ fun utilitaDaSpesa(eta: Int, spesaMensile: Double, inputs: FinancialInput): Doub
     return (fdeg * uRaw).coerceIn(0.0, 1.0)
 }
 
+private data class MonthlySimulationPoint(
+    val eta: Int,
+    val capitaleInizioPeriodo: Double,
+    val spesaMensile: Double,
+    val utility: Double,
+    val savingRatio: Double,
+    val capitaleFinePeriodo: Double,
+    val utilityAtThreshold: Boolean,
+    val debtAmount: Double,
+    val debtRepayment: Double,
+    val violazioneLascito: Boolean
+)
+
+private fun monthlyRateFromAnnual(annualRate: Double): Double {
+    return (1.0 + annualRate).pow(1.0 / 12.0) - 1.0
+}
+
+private fun spesaMinimaPerEta(eta: Double, utilityOffset: Double, inputs: FinancialInput): Double {
+    val fdeg = funzioneDegradoPerEta(eta, inputs).coerceAtLeast(1e-9)
+    val requiredUtility = (inputs.sogliaMinimaFunzioneUtilita - utilityOffset).coerceAtLeast(0.0)
+    if (requiredUtility <= 0.0) return 0.0
+
+    val requiredRaw = (requiredUtility / fdeg).coerceIn(0.0, 1.0)
+    val curve = inputs.utilityCurvePoints?.let(::sortedFiniteCurve)?.takeIf { it.size >= 2 }
+
+    return if (curve != null) {
+        invertCurveX(curve, requiredRaw).coerceAtLeast(0.0) * DAYS_PER_MONTH
+    } else {
+        val q = requiredRaw.coerceIn(1e-6, 1.0 - 1e-6)
+        val baselineMax = Defaults.BASELINE_MAX_SPESA
+        val baselineCenter = Defaults.BASELINE_CENTER
+        val baselineK = Defaults.BASELINE_K
+        val targetMonthly = inputs.valoreSpesaGiornalieraMaxUtilita * DAYS_PER_MONTH
+        val scale = if (targetMonthly > 0.0) targetMonthly / baselineMax else 1.0
+        val x0 = baselineCenter * scale
+        val k = baselineK / scale
+        val res = x0 + (1.0 / k) * ln(q / (1.0 - q))
+        if (res.isFinite()) res else 0.0
+    }
+}
+
+private fun monthlySurplusForAge(
+    age: Double,
+    inputs: FinancialInput,
+    surplusData: SurplusInput,
+    surplusOffset: Double
+): Double {
+    val ageInt = floor(age).toInt()
+    var monthly = when {
+        ageInt < inputs.etaPensione -> {
+            val income = surplusData.stipendioMensile +
+                (surplusData.premioRisultatoNettoAnnuale / 12.0) +
+                (surplusData.tredicesimaQuattordicesimaNetto / 12.0) +
+                if (ageInt <= surplusData.bonusEventualiPersonaliMensileFinoEta) surplusData.bonusEventualiPersonaliMensile else 0.0
+            val outgo = (if (ageInt < surplusData.mutuoAffittoFinoEta) surplusData.mutuoAffitto else 0.0) +
+                surplusData.condominioLavorativa +
+                surplusData.bolletteLavorativa +
+                surplusData.ciboLavorativa +
+                surplusData.veicoliLavorativa +
+                surplusData.palestraLavorativa +
+                surplusData.trasportiViaggiLavorativa +
+                surplusData.saluteLavorativa +
+                surplusData.vacanzeLavorativa +
+                surplusData.shoppingLavorativa +
+                surplusData.altroLavorativa
+            income - outgo
+        }
+        else -> {
+            val income = surplusData.pensioneMensileNetta +
+                surplusData.altreEntrateMensiliPensione +
+                (surplusData.tredicesimaQuattordicesimaNettoPensione / 12.0) +
+                if (ageInt <= surplusData.bonusEventualiPersonaliPensioneMensileFinoEta) surplusData.bonusEventualiPersonaliPensioneMensile else 0.0
+            val outgo = (if (ageInt < surplusData.mutuoAffittoFinoEta) surplusData.mutuoAffitto else 0.0) +
+                surplusData.condominioPensione +
+                surplusData.bollettePensione +
+                surplusData.ciboPensione +
+                surplusData.veicoliPensione +
+                surplusData.palestraPensione +
+                surplusData.trasportiViaggiPensione +
+                surplusData.salutePensione +
+                surplusData.vacanzePensione +
+                surplusData.shoppingPensione +
+                surplusData.altroPensione
+            income - outgo
+        }
+    }
+
+    monthly += surplusOffset * DAYS_PER_MONTH
+    return monthly
+}
+
+private fun aggregateMonthlyPoints(monthly: List<MonthlySimulationPoint>): List<SimulationYear> {
+    if (monthly.isEmpty()) return emptyList()
+
+    return monthly
+        .groupBy { it.eta }
+        .toSortedMap()
+        .map { (eta, points) ->
+            val opening = points.first().capitaleInizioPeriodo
+            val ending = points.last().capitaleFinePeriodo
+            val utilitySamples = points.map { it.utility }
+            SimulationYear(
+                eta = eta,
+                capitaleInizioAnno = opening,
+                spesaMensileCorrettaFinale = points.map { it.spesaMensile }.average(),
+                funzioneUtilita = utilitySamples.average(),
+                savingRatioEffettivo = points.map { it.savingRatio }.average(),
+                violazioneLascito = points.any { it.violazioneLascito },
+                capitaleFineAnno = ending,
+                utilityAtThreshold = points.any { it.utilityAtThreshold },
+                debtAmount = points.last().debtAmount,
+                debtRepayment = points.sumOf { it.debtRepayment },
+                capitaleEroso = opening - ending,
+                monthlyUtilitySamples = utilitySamples
+            )
+        }
+}
+
 fun calculateSimulation(
     inputs: FinancialInput,
     specificExpenses: List<SpecificExpense>,
@@ -118,284 +253,142 @@ fun calculateSimulation(
     surplusOffset: Double = 0.0
 ): List<SimulationYear> {
     try {
-        val simulationYears = mutableListOf<SimulationYear>()
-        var capitaleAnnoPrecedente = inputs.capitaleIniziale
-        var currentDebt = 0.0
-        val debtInterestRate = inputs.tassoInteresseDebito
-        val daysPerMonth = 365.0 / 12.0
-        val valoreSpesaMensileMaxUtilita = inputs.valoreSpesaGiornalieraMaxUtilita * daysPerMonth
+        val startAge = inputs.etaAttuale.toDouble()
+        val monthCount = max(0, (inputs.etaMorte - inputs.etaAttuale) * 12)
+        if (monthCount == 0) return emptyList()
 
-        val mutuoFinoEta = surplusData.mutuoAffittoFinoEta
-        val surplusLavorativaConMutuo = surplusData.calculateSurplusGiornalieroLavorativa(true)
-        val surplusLavorativaSenzaMutuo = surplusData.calculateSurplusGiornalieroLavorativa(false)
-        val surplusPensioneConMutuo = surplusData.calculateSurplusGiornalieroPensione(true)
-        val surplusPensioneSenzaMutuo = surplusData.calculateSurplusGiornalieroPensione(false)
-        val bonusLavoroGiornaliero = surplusData.bonusEventualiPersonaliMensile * 12 / 365.0
-        val bonusPensioneGiornaliero = surplusData.bonusEventualiPersonaliPensioneMensile * 12 / 365.0
-        var cumulativeUtilityOffset = 0.0
+        val p2Month = max(0, (inputs.p2EtaFineRisparmioNoCapitale - inputs.etaAttuale) * 12)
+        val p4Age = max(inputs.p4EtaAnticipataInizioSpesaCapitale, inputs.p2EtaFineRisparmioNoCapitale)
+        val p4Month = max(0, (p4Age - inputs.etaAttuale) * 12)
+        val capitalMonthlyRate = monthlyRateFromAnnual(inputs.tassoGuadagnoInteresse)
+        val debtMonthlyRate = monthlyRateFromAnnual(inputs.tassoInteresseDebito)
 
-        // Optimization: Pre-compute arrays for O(1) access
-        val maxAge = inputs.etaMorte
-        val expenseAmountByAge = DoubleArray(maxAge + 1)
-        val expenseUtilityOffsetByAge = DoubleArray(maxAge + 1)
+        val expenseAmountByMonth = DoubleArray(monthCount)
+        val expenseUtilityOffsetByMonth = DoubleArray(monthCount)
         for (expense in specificExpenses) {
-            if (expense.age <= maxAge) {
-                expenseAmountByAge[expense.age] += expense.amount
-                expenseUtilityOffsetByAge[expense.age] += expense.utilityOffset
+            val month = ((expense.age - startAge) * 12.0).roundToInt()
+            if (month in 0 until monthCount) {
+                expenseAmountByMonth[month] += expense.amount
+                expenseUtilityOffsetByMonth[month] += expense.utilityOffset
             }
         }
 
-        val surplusGiornalieroByAge = DoubleArray(maxAge + 1)
-        val ereditaTfrByAge = DoubleArray(maxAge + 1)
+        val inheritanceMonth = ((inputs.etaRicevimentoEredita - startAge) * 12.0).roundToInt()
+        val tfrMonth = ((inputs.etaPensione - startAge) * 12.0).roundToInt()
 
-        for (eta in inputs.etaAttuale..maxAge) {
-             var s = (when {
-                eta < inputs.etaPensione -> if (eta < mutuoFinoEta) surplusLavorativaConMutuo else surplusLavorativaSenzaMutuo
-                else -> if (eta < mutuoFinoEta) surplusPensioneConMutuo else surplusPensioneSenzaMutuo
-            }) + surplusOffset
+        val discountBase = 1.0 + capitalMonthlyRate
+        val futureExpenseReserve = DoubleArray(monthCount)
+        if (monthCount >= 2) {
+            for (month in monthCount - 2 downTo 0) {
+                futureExpenseReserve[month] =
+                    (futureExpenseReserve[month + 1] + expenseAmountByMonth[month + 1]) / discountBase
+            }
+        }
 
-            if (eta < inputs.etaPensione) {
-                if (eta > surplusData.bonusEventualiPersonaliMensileFinoEta) {
-                    s -= bonusLavoroGiornaliero
-                }
+        fun reserveAt(month: Int): Double {
+            val periodsToHorizon = (monthCount - 1 - month).toDouble()
+            val bequestReserve = if (discountBase > 0.0) {
+                inputs.soldiDaConservare / discountBase.pow(periodsToHorizon)
             } else {
-                if (eta > surplusData.bonusEventualiPersonaliPensioneMensileFinoEta) {
-                    s -= bonusPensioneGiornaliero
-                }
+                inputs.soldiDaConservare
             }
-            surplusGiornalieroByAge[eta] = s
-
-            val ereditaTfr = (if (eta == inputs.etaPensione) inputs.tfrNetto else 0.0) + 
-                             (if (eta == inputs.etaRicevimentoEredita) inputs.eredita else 0.0) - 
-                             expenseAmountByAge[eta]
-            ereditaTfrByAge[eta] = ereditaTfr
+            return bequestReserve + futureExpenseReserve[month]
         }
 
-        fun spesaMinimaPerEta(eta: Int, utilityOffset: Double): Double {
-            val fdeg = funzioneDegradoPerEta(eta, inputs).coerceAtLeast(1e-9)
-            val requiredUtility = (inputs.sogliaMinimaFunzioneUtilita - utilityOffset).coerceAtLeast(0.0)
-            if (requiredUtility <= 0.0) return 0.0
+        var capital = inputs.capitaleIniziale
+        var debt = 0.0
+        var cumulativeUtilityOffset = 0.0
+        val monthlyPoints = mutableListOf<MonthlySimulationPoint>()
 
-            val requiredRaw = (requiredUtility / fdeg).coerceIn(0.0, 1.0)
-
-            val curve = inputs.utilityCurvePoints?.let(::sortedFiniteCurve)?.takeIf { it.size >= 2 }
-            return if (curve != null) {
-                val dailyNeeded = invertCurveX(curve, requiredRaw).coerceAtLeast(0.0)
-                val res = dailyNeeded * daysPerMonth
-                if (res.isFinite()) res else 0.0
-            } else {
-                val q = requiredRaw.coerceIn(1e-6, 1.0 - 1e-6)
-                val baselineMax = Defaults.BASELINE_MAX_SPESA
-                val baselineCenter = Defaults.BASELINE_CENTER
-                val baselineK = Defaults.BASELINE_K
-                val scale = if (valoreSpesaMensileMaxUtilita > 0) valoreSpesaMensileMaxUtilita / baselineMax else 1.0
-                val x0 = baselineCenter * scale
-                val k = baselineK / scale
-                val res = x0 + (1.0 / k) * ln(q / (1.0 - q))
-                if (res.isFinite()) res else 0.0
+        fun normalizeBalances(): Double {
+            var repaid = 0.0
+            if (capital < 0.0) {
+                debt += -capital
+                capital = 0.0
             }
+            if (capital > 0.0 && debt > 0.0) {
+                repaid = min(capital, debt)
+                capital -= repaid
+                debt -= repaid
+            }
+            return repaid
         }
 
-        fun forecastFinalWithMin(startCapital: Double, startAge: Int, startDebt: Double, startUtilityOffset: Double): Double {
-            var cap = startCapital
-            var debt = startDebt
-            var utilityOffset = startUtilityOffset
-            for (eta in startAge..inputs.etaMorte) {
-                utilityOffset += expenseUtilityOffsetByAge[eta]
-                val surplusM = surplusGiornalieroByAge[eta] * daysPerMonth
-                val smin = spesaMinimaPerEta(eta, utilityOffset)
-                var cashPool = cap + ereditaTfrByAge[eta] + (surplusM - smin) * 12
+        for (month in 0 until monthCount) {
+            val age = startAge + month / 12.0
+            val ageBucket = floor(age).toInt()
+            val openingCapital = capital
 
-                if (debt > 0) {
-                    val debtInterest = debt * debtInterestRate
-                    debt += debtInterest
-                    val repayable = cashPool.coerceAtLeast(0.0)
-                    val paid = min(repayable, debt)
-                    cashPool -= paid
-                    debt -= paid
-                }
-
-                if (cashPool < 0) {
-                    debt += -cashPool
-                    cashPool = 0.0
-                }
-
-                cap = cashPool * (1 + inputs.tassoGuadagnoInteresse)
-                if (!cap.isFinite()) return -1e15 // Divergence
+            capital *= (1.0 + capitalMonthlyRate)
+            if (debt > 0.0) {
+                debt *= (1.0 + debtMonthlyRate)
             }
-            return cap - debt
-        }
 
+            if (month == inheritanceMonth) capital += inputs.eredita
+            if (month == tfrMonth) capital += inputs.tfrNetto
 
-        for (eta in inputs.etaAttuale..inputs.etaMorte) {
-            val capitaleInizioAnno = capitaleAnnoPrecedente
-            var debtRepayment = 0.0
+            capital -= expenseAmountByMonth[month]
+            cumulativeUtilityOffset += expenseUtilityOffsetByMonth[month]
 
-            cumulativeUtilityOffset += expenseUtilityOffsetByAge[eta]
+            var debtRepayment = normalizeBalances()
 
-            val surplusGiornaliero = surplusGiornalieroByAge[eta]
-            val surplusMensile = surplusGiornaliero * daysPerMonth
-            val ereditaTfrAnno = ereditaTfrByAge[eta]
+            val monthlySurplus = monthlySurplusForAge(age, inputs, surplusData, surplusOffset)
+            val monthlySaving = if (month < p2Month) inputs.p1SavingRatioSurplus * monthlySurplus else 0.0
+            val spendSurplus = monthlySurplus - monthlySaving
 
-            var spesaMensileCorrettaFinale: Double
+            capital += monthlySaving
+            debtRepayment += normalizeBalances()
 
-            // --- Determine desired spending level (using original logic) ---
-            // Force P4 >= P2 constraint in the local calculation
-            val p2 = inputs.p2EtaFineRisparmioNoCapitale
-            val p4 = max(inputs.p4EtaAnticipataInizioSpesaCapitale, p2)
-
-            val quotaCapitaleSpesaAnnuale = if (eta == inputs.etaMorte) {
-                max(0.0, capitaleInizioAnno - inputs.soldiDaConservare)
-            } else if (eta >= inputs.etaPensione) {
-                (capitaleInizioAnno - inputs.soldiDaConservare) / (inputs.etaMorte - eta)
-            } else if (eta >= p4 && eta >= p2) {
-                inputs.p3PercentualeCapitaleDaSpendereAnnualmente * (capitaleInizioAnno - inputs.soldiDaConservare) / (inputs.etaMorte - eta)
+            val reserve = reserveAt(month)
+            val availableNetWorth = (capital - debt).coerceAtLeast(0.0)
+            val excess = (availableNetWorth - reserve).coerceAtLeast(0.0)
+            val remainingMonths = (monthCount - month).coerceAtLeast(1)
+            val draw = if (month >= p4Month) {
+                min(excess, inputs.p3PercentualeCapitaleDaSpendereAnnualmente * excess / remainingMonths.toDouble())
             } else {
                 0.0
             }
 
-            val spesaMensileSurplusNoCapitale =
-                if (eta < p2) surplusMensile * (1 - inputs.p1SavingRatioSurplus) else surplusMensile
-            val spesaMensileSurplusCorretta = spesaMensileSurplusNoCapitale + quotaCapitaleSpesaAnnuale / 12
-
-            val spesaMensileMinima = spesaMinimaPerEta(eta, cumulativeUtilityOffset)
-
-            spesaMensileCorrettaFinale = min(
-                max(spesaMensileSurplusCorretta, spesaMensileMinima),
-                valoreSpesaMensileMaxUtilita
-            )
-
-            fun nextCapitalAndDebtFrom(spesaMensile: Double, capStart: Double, debtStart: Double): Pair<Double, Double> {
-                var cashPool = capStart + ereditaTfrAnno + (surplusMensile - spesaMensile) * 12
-                var debt = debtStart
-                if (debt > 0) {
-                    val debtInterest = debt * debtInterestRate
-                    debt += debtInterest
-                    val repayable = cashPool.coerceAtLeast(0.0)
-                    val paid = min(repayable, debt)
-                    cashPool -= paid
-                    debt -= paid
-                }
-                if (cashPool < 0) {
-                    debt += -cashPool
-                    cashPool = 0.0
-                }
-                val capNext = cashPool * (1 + inputs.tassoGuadagnoInteresse)
-                return capNext to debt
+            if (draw > 0.0) {
+                capital -= draw
+                normalizeBalances()
             }
 
-            if (eta >= inputs.etaPensione && eta < inputs.etaMorte) {
-                val remainingIncludingThis = (inputs.etaMorte - eta + 1).toDouble()
-                if (remainingIncludingThis > 1.0) {
-                    val i = inputs.tassoGuadagnoInteresse
-                    val ceff = (capitaleInizioAnno + ereditaTfrAnno - currentDebt).coerceAtLeast(0.0)
-                    val wReq = if (i > 0.0) {
-                        ((ceff * (1.0 + i).pow(remainingIncludingThis) - inputs.soldiDaConservare) * i) /
-                                ((1.0 + i).pow(remainingIncludingThis) - 1.0)
-                    } else {
-                        (ceff - inputs.soldiDaConservare) / remainingIncludingThis
-                    }
-                    val debtInterestAnnual = currentDebt * debtInterestRate
-                    val spendReq = surplusMensile + (wReq - debtInterestAnnual) / 12.0
-                    spesaMensileCorrettaFinale = min(
-                        max(spendReq, spesaMensileMinima),
-                        valoreSpesaMensileMaxUtilita
-                    )
-                    val (capNext, debtNext) = nextCapitalAndDebtFrom(spesaMensileCorrettaFinale, capitaleInizioAnno, currentDebt)
-                    val finalIfMin = forecastFinalWithMin(capNext, eta + 1, debtNext, cumulativeUtilityOffset)
-                    
-                    // Safety margin: require slightly more than the goal to account for floating point errors
-                    // and ensure we don't accidentally fall just below the threshold.
-                    if (finalIfMin < inputs.soldiDaConservare + 1.0) {
-                        spesaMensileCorrettaFinale = min(
-                            spesaMensileMinima,
-                            valoreSpesaMensileMaxUtilita
-                        )
-                    }
-                }
+            val baseSpend = (spendSurplus + draw).coerceAtLeast(0.0)
+            val minimumSpend = spesaMinimaPerEta(age, cumulativeUtilityOffset, inputs)
+            val finalSpend = max(baseSpend, minimumSpend)
+            val additionalSpendNeeded = (finalSpend - baseSpend).coerceAtLeast(0.0)
+
+            if (additionalSpendNeeded > 0.0) {
+                capital -= additionalSpendNeeded
+                normalizeBalances()
             }
 
-            if (eta == inputs.etaMorte) {
-                val i = inputs.tassoGuadagnoInteresse
-                val ceff = (capitaleInizioAnno + ereditaTfrAnno - currentDebt).coerceAtLeast(0.0)
-                val wReq = (ceff - inputs.soldiDaConservare / (1.0 + i))
-                val debtInterestAnnual = currentDebt * debtInterestRate
-                val spendReq = surplusMensile + (wReq - debtInterestAnnual) / 12.0
-                spesaMensileCorrettaFinale = min(
-                    max(spendReq, spesaMensileMinima),
-                    valoreSpesaMensileMaxUtilita
-                )
-            }
+            val utility = utilitaDaSpesa(age, finalSpend, inputs) + cumulativeUtilityOffset
+            val savingRatioEffettivo = if (monthlySurplus > 0.0) (monthlySaving / monthlySurplus) else 0.0
+            val violazioneLascito = month == monthCount - 1 && (capital - debt) < (inputs.soldiDaConservare - 1.0)
 
-            // --- New consolidated cash flow and debt logic ---
-            val spesaAnnuale = spesaMensileCorrettaFinale * 12
-            val netCashFlow = (surplusMensile * 12) - spesaAnnuale
-
-            var cashPool = capitaleInizioAnno + ereditaTfrAnno + netCashFlow
-
-            if (currentDebt > 0) {
-                val debtInterest = currentDebt * debtInterestRate
-                currentDebt += debtInterest
-
-                val repayable = cashPool.coerceAtLeast(0.0)
-                val totalPaid = min(repayable, currentDebt)
-                cashPool -= totalPaid
-
-                val interestPaid = min(totalPaid, debtInterest)
-                val principalPaid = totalPaid - interestPaid
-
-                debtRepayment = totalPaid
-                currentDebt -= totalPaid
-            }
-
-            if (cashPool < 0) {
-                currentDebt += -cashPool
-                cashPool = 0.0
-            }
-
-            val capitaleFineAnno = cashPool * (1 + inputs.tassoGuadagnoInteresse)
-            val patrimonioNettoFineAnno = capitaleFineAnno - currentDebt
-
-            val funzioneUtilitaRaw =
-                if (eta == inputs.etaMorte && patrimonioNettoFineAnno < 0.9 * inputs.soldiDaConservare) {
-                    -100.0
-                } else {
-                    utilitaDaSpesa(eta, spesaMensileCorrettaFinale, inputs) + cumulativeUtilityOffset
-                }
-            
-            val funzioneUtilita = if (funzioneUtilitaRaw.isFinite()) funzioneUtilitaRaw else -1.0
-
-            val savingRatioEffettivo = if (surplusMensile > 0.0) ((surplusMensile - spesaMensileSurplusNoCapitale) / surplusMensile) else 0.0
-            
-            // Fix: Lascito violation should ONLY apply at death (failed goal).
-            // Debt during life is allowed as long as it's repaid by the end.
-            // We use a small tolerance (1.0) to avoid floating point issues.
-            val isLegacyFailure = (eta == inputs.etaMorte && patrimonioNettoFineAnno < (inputs.soldiDaConservare - 1.0))
-            val violazioneLascito = isLegacyFailure
-            
-            val utilityAtThreshold = abs(spesaMensileCorrettaFinale - spesaMensileMinima) <= 1e-6
-
-            simulationYears.add(
-                SimulationYear(
-                    eta = eta,
-                    capitaleInizioAnno = capitaleInizioAnno,
-                    spesaMensileCorrettaFinale = spesaMensileCorrettaFinale,
-                    funzioneUtilita = funzioneUtilita,
-                    savingRatioEffettivo = savingRatioEffettivo,
-                    violazioneLascito = violazioneLascito,
-                    capitaleFineAnno = capitaleFineAnno,
-                    utilityAtThreshold = utilityAtThreshold,
-                    debtAmount = currentDebt,
+            monthlyPoints.add(
+                MonthlySimulationPoint(
+                    eta = ageBucket,
+                    capitaleInizioPeriodo = openingCapital,
+                    spesaMensile = finalSpend,
+                    utility = if (utility.isFinite()) utility else -1.0,
+                    savingRatio = savingRatioEffettivo,
+                    capitaleFinePeriodo = capital,
+                    utilityAtThreshold = abs(finalSpend - minimumSpend) <= 1e-6 && minimumSpend > 0.0,
+                    debtAmount = debt,
                     debtRepayment = debtRepayment,
-                    capitaleEroso = capitaleInizioAnno - capitaleFineAnno
+                    violazioneLascito = violazioneLascito
                 )
             )
 
-            capitaleAnnoPrecedente = capitaleFineAnno
-            if (!capitaleAnnoPrecedente.isFinite()) throw ArithmeticException("Capitale non finito")
+            if (!capital.isFinite() || !debt.isFinite()) {
+                throw ArithmeticException("Monthly capital or debt became non-finite")
+            }
         }
 
-        return simulationYears
+        return aggregateMonthlyPoints(monthlyPoints)
     } catch (e: Exception) {
         // Return a special dummy year that will force fobj to 0 in upstream functions
         return listOf(SimulationYear(eta = inputs.etaAttuale, funzioneUtilita = -1e9))
@@ -404,14 +397,10 @@ fun calculateSimulation(
 
 
 fun computeObjective(avgUtilita: Double, stdDevUtilita: Double, bonusStdWeight: Double): Double {
-    val weight = bonusStdWeight / 100.0 // Divide by 100 as requested
-    val stabilityTerm = if (stdDevUtilita > 1e-9) {
-        avgUtilita / stdDevUtilita
-    } else {
-        100.0 // Very high stability reward
-    }
-    // Weighted average of AvgUtility and StabilityTerm: (Avg + w/100 * Avg/Std) / (1 + w/100)
-    return (avgUtilita + weight * stabilityTerm) / (1.0 + weight)
+    val weight = bonusStdWeight.coerceIn(0.0, 1.0)
+    val stabilityTerm = computeStabilityScore(avgUtilita, stdDevUtilita)
+    val penaltyFactor = (1.0 - weight) + weight * stabilityTerm
+    return avgUtilita * penaltyFactor
 }
 
 fun calculateObjectivesFromYears(
@@ -423,32 +412,34 @@ fun calculateObjectivesFromYears(
 
     val finalCapital = years.lastOrNull()?.capitaleFineAnno ?: 0.0
     val legacyGap = finalCapital - (legacyTarget ?: 0.0)
+    val utilitySamples = years.flatMap { year ->
+        if (year.monthlyUtilitySamples.isNotEmpty()) year.monthlyUtilitySamples else listOf(year.funzioneUtilita)
+    }
     val isFeasible = !years.any { it.violazioneLascito } &&
-        years.none { !it.funzioneUtilita.isFinite() || it.funzioneUtilita < 0.0 }
+        utilitySamples.none { !it.isFinite() || it < 0.0 }
 
     // NEW LOGIC: Any constraint violation or math error forces objective to 0.0.
     if (years.any { it.violazioneLascito }) {
         AppDebugLog.add("SimLogic", "Zero objective: violazioneLascito detected in ${years.count { it.violazioneLascito }} years")
         return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0, false, finalCapital, legacyGap)
     }
-    if (years.any { !it.funzioneUtilita.isFinite() }) {
+    if (utilitySamples.any { !it.isFinite() }) {
         AppDebugLog.add("SimLogic", "Zero objective: Non-finite utility detected")
         return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0, false, finalCapital, legacyGap)
     }
-    if (years.any { it.funzioneUtilita < 0 }) {
+    if (utilitySamples.any { it < 0.0 }) {
         AppDebugLog.add("SimLogic", "Zero objective: Negative utility detected")
         return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0, false, finalCapital, legacyGap)
     }
 
-    val utilities = years.map { it.funzioneUtilita }
-    val avgUtilita = utilities.average()
+    val avgUtilita = utilitySamples.average()
     
     if (!avgUtilita.isFinite() || avgUtilita <= 0.0) {
         AppDebugLog.add("SimLogic", "Zero objective: avgUtilita <= 0 or infinite: $avgUtilita")
         return ObjectiveResults(0.0, 0.0, 0.0, 0.0, 0.0, false, finalCapital, legacyGap)
     }
 
-    val stdDevUtilita = calculateStandardDeviation(utilities)
+    val stdDevUtilita = calculateStandardDeviation(utilitySamples)
     val fObjW = computeObjective(avgUtilita, stdDevUtilita, bonusStdWeight)
     
     // Log meaningful results
@@ -458,13 +449,7 @@ fun calculateObjectivesFromYears(
 
     val fObj0 = computeObjective(avgUtilita, stdDevUtilita, 0.0)
     
-    // Stability Index = std / (w/100)
-    val weight = bonusStdWeight / 100.0
-    val stabilityIndex = if (weight > 1e-9) {
-        stdDevUtilita / weight
-    } else {
-        0.0
-    }
+    val stabilityIndex = computeStabilityScore(avgUtilita, stdDevUtilita)
 
     return ObjectiveResults(
         fObjW = fObjW,

@@ -43,9 +43,9 @@
     <string name="impact_on_objective_function">Impact on Objective Function:</string>
     <string name="results_parameters_used">Used Parameters: P1=%1$.4f, P2=%2$d, P3=%3$.4f, P4=%4$d</string>
     <string name="final_objective_function">Final Objective Function: %1$.3f</string>
-    <string name="definition_objective_function">Current scalar score of displayed plan: (AvgUtility + (w/100) * (AvgUtility/StdDev)) / (1 + w/100), w=%1$.2f</string>
+    <string name="definition_objective_function">Current scalar score of displayed plan: AvgUtility * ((1 - w) + w * StabilityScore), w=%1$.2f</string>
     <string name="definition_std_dev">Definition: Standard Deviation of yearly utility values.</string>
-    <string name="definition_stability_index">Formula: Stability Index = StdDev / (w/100).\n&gt;&gt; 1: Low w, priority on Avg Utility.\n&lt;&lt; 1: High w, priority on Stability.\n~ 1: Balanced.</string>
+    <string name="definition_stability_index">Formula: Stability Score = AvgUtility / (AvgUtility + StdDev).\nNear 1: more stable utility.\nNear 0: more volatile utility.</string>
     <string name="average_utility">Average Utility: %1$.3f</string>
     <string name="std_dev">Standard Deviation: %1$.3f</string>
     <string name="warning_utility_threshold_not_met">Warning: The minimum utility constraint cannot be met while preserving the final capital. Try reducing the minimum utility threshold or the daily spending for max utility.</string>
@@ -271,8 +271,8 @@
     <string name="charts_weight_release_reopt_note">Weight changes update optimization markers when you release the slider.</string>
     <string name="charts_optimizing_params">Optimizing parameters…</string>
     <string name="charts_optimal_f_results">Optimal F(w)=%1$.3f | F(0)=%2$.3f</string>
-    <string name="charts_stability_index_value">Stability Index: %1$.2f (1 means balanced optimization between fobj and small std dev)</string>
-    <string name="charts_fobj_formula">Scalar exploration formula: fobj = (AvgUtil + (w/100) * (AvgUtil / StdDev)) / (1 + w/100)</string>
+    <string name="charts_stability_index_value">Stability Score: %1$.2f (closer to 1 means more stable utility)</string>
+    <string name="charts_fobj_formula">Scalar exploration formula: fobj = AvgUtil * ((1 - w) + w * StabilityScore)</string>
     <string name="charts_pareto_knee_summary">Pareto-knee mode: selected from %1$d Pareto points | score %2$.4f | AvgUtil %3$.4f | StdDev %4$.4f</string>
     <string name="charts_pareto_front_summary">Pareto-front mode: %1$d feasible non-dominated plans | ideal AvgUtil %2$.4f | ideal StdDev %3$.4f</string>
     <string name="charts_switch_3d">Switch to 3D Surface</string>

@@ -7,6 +7,6 @@ class AgentReportFormatterTest {
 
     @Test
     fun computeStabilityIndex_matchesSimulationLogicScaling() {
-        assertEquals(25.0, AgentReportFormatter.computeStabilityIndex(0.125, 0.50), 1e-9)
+        assertEquals(0.8, AgentReportFormatter.computeStabilityIndex(0.50, 0.125), 1e-9)
     }
 }

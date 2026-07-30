@@ -18,7 +18,8 @@ data class SimulationYear(
     val utilityAtThreshold: Boolean = false,
     val debtAmount: Double = 0.0,
     val debtRepayment: Double = 0.0,
-    val capitaleEroso: Double = 0.0
+    val capitaleEroso: Double = 0.0,
+    val monthlyUtilitySamples: List<Double> = emptyList()
 )
 
 data class SensitivityResult(

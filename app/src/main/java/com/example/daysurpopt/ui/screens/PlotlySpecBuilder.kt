@@ -459,7 +459,7 @@ object PlotlySpecBuilder {
                 ),
                 "annotations" to listOf(
                     mapOf(
-                        "text" to "Obj = (Avg + w/100 * Avg/Std) / (1 + w/100)<br>Stability Index = StdDev / (w/100)",
+                        "text" to "Obj = Avg * ((1 - w) + w * StabilityScore)<br>Stability Score = Avg / (Avg + StdDev)",
                         "showarrow" to false,
                         "xref" to "paper",
                         "yref" to "paper",
