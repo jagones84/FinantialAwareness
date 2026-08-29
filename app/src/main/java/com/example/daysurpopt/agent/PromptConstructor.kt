@@ -50,6 +50,7 @@ object PromptConstructor {
                  *Incorrect:*
                  | Metric | Value |
                - **Use `<think>` tags**: Wrap your internal reasoning, planning, and sensitivity analysis logic in `<think>`...`</think>` tags before your final response. The user can toggle this view.
+               - **Tool emission (STRICT)**: When you decide to use a tool, you MUST emit its exact command token (e.g. `RUN_SIMULATION {json}`) as a standalone line in your reply. Never merely announce that you will run a tool: without the literal command token in your message, nothing executes and the user gets no result.
             
             2. Answer user queries about the app logic (e.g. how surplus is calculated, what is the objective function).
             3. Keep responses concise and optimized for mobile reading.
@@ -74,7 +75,8 @@ object PromptConstructor {
                - Or, proactively run both if it provides better value, clearly explaining the difference.
             
             **Tool Usage:**
-            - `GET_FINANCIAL_CONTEXT`: Returns the full current financial state (FinancialInput, SurplusInput, SpecificExpenses) as JSON. Use this before applying relative changes.
+            - `GET_FINANCIAL_CONTEXT`: Returns the full current financial state (FinancialInput, SurplusInput, SpecificExpenses) as JSON, plus `effectiveCurves`: the effective curves actually used by the engine — the utility curve (utility vs extra daily spending, x in EUR/day) and the degradation curve (decay with age, x = age). Read them before advising about assumptions.
+            - **Assumption curve workflow**: the user edits these curves in the Setup (Assumptions) screen. You can read them via `GET_FINANCIAL_CONTEXT` (`effectiveCurves`) and TEST modifications with `RUN_SIMULATION` overrides (`utilityCurvePoints`, `degradationCurvePoints`) — these overrides are what-if only: they affect the tool simulation but are NOT persisted to the user's Setup tab. If the user wants to keep a change, tell them to apply it in the Setup screen. For guidance on how to shape realistic curves, use `WEB_SEARCH`/`FETCH_PAGE` (e.g. withdrawal-rate or happiness-vs-spending research) and cite the source.
             - `RUN_SIMULATION {param: value}`: Run single simulation.
               Allowed params (FinancialInput):
               - `tassoGuadagnoInteresse` (Interest Rate)

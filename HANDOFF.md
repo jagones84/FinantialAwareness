@@ -46,7 +46,43 @@ All fixes were applied **red-first** (failing test → implementation → green 
   Goal Solver dialog validates its own ages), F3 partial (threshold/ceiling now surfaced via the
   Goal Solver dialog, not in the main results card), optional "apply optimization results" agent
   write-back tool, PDF/charts/profile-management agent tools.
-- Verification: `testDebugUnitTest` 102 tests / 0 failures / 0 errors; `assembleDebug` green.
+- Verification: `testDebugUnitTest` 109 tests / 0 failures / 0 errors (1 opt-in skip); `assembleDebug` green.
+
+## 0b. TO VALIDATE — assumption curves access & web research (user request, 2026-08-05)
+
+Status of the agent's access to the curves edited in the **Setup (Assumptions) tab** — the utility
+curve (utility vs extra daily spending, x = EUR/day) and the degradation curve (decay with age,
+x = age) — and of its web-research capability:
+
+- **READ — implemented & validated.** `GET_FINANCIAL_CONTEXT` returns `effectiveCurves` with the
+  engine-effective points (defaults materialized when the user has no custom curve). Unit-tested
+  (`AgentCurveAccessTest`) and validated end-to-end with a real LLM: the agent quoted y = 0.3037 at
+  age 90, engine-exact.
+- **EDIT — what-if only; persistence NOT available (to validate with the user).** The agent can test
+  curve modifications via `RUN_SIMULATION` overrides (`utilityCurvePoints`, `degradationCurvePoints`)
+  — parity locked by tests and exercised end-to-end (Final Capital 75,711 € with a flatter
+  degradation curve). There is **no write-back tool**: curve changes are NOT persisted to the Setup
+  tab; the agent is instructed to tell the user to apply them manually. If persistence is desired,
+  a new tool (e.g. `SET_ASSUMPTIONS`) writing through the ViewModel/Repository path is needed.
+- **WEB RESEARCH — implemented, e2e still to validate.** `WEB_SEARCH` (DuckDuckGo HTML via jsoup,
+  no API key) and `FETCH_PAGE` are available and documented for curve-shaping research. Not yet
+  exercised in a real-harness run: DuckDuckGo HTML can be rate-limited/blocked from mobile networks
+  — validate on-device and consider a fallback engine if unreliable.
+- **OpenRouter config (user question: "è settato in env?").** NO key exists in env vars or
+  `local.properties` (only `sdk.dir`). `OPENROUTER_BASE_URL`/`HTTP_REFERER`/`TITLE` come from
+  `local.properties` with defaults; the **API key and model live only in the app's SharedPreferences**
+  (`AgentPrefs`, entered via the in-app settings dialog; default model `qwen/qwen3.7-plus`). The
+  "Invalid API key." message in the chat is the 401 path when the dialog key is wrong/empty.
+- **Can the agent be interrogated from outside with its own tool harness? YES.**
+  `AgentOpenRouterHarnessTest` runs the agent exactly like the chat (safety prompt + system prompt +
+  `AgentToolExecutor` loop) against any OpenAI-compatible provider: `OPENROUTER_API_KEY` preferred,
+  else `OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `GEMINI_API_KEY` (failover on 401/402/429). It is
+  **opt-in** (`AGENT_HARNESS_E2E=1` + key env) because real LLMs are non-deterministic. Validated
+  with DeepSeek. Run: `$env:AGENT_HARNESS_E2E="1"; .\gradlew.bat testDebugUnitTest --tests "...AgentOpenRouterHarnessTest"`.
+- **Real defects found by that e2e (fixed):** (1) multiple tool commands in one LLM response
+  executed only the first → `checkForToolUse` now executes ALL of them; (2) models sometimes
+  announce a tool without emitting the command token → strict "Tool emission" rule added to the
+  system prompt.
 
 ---
 

@@ -305,11 +305,11 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             
             // Recurse: Agent sees tool result and decides next step, remembering which
             // tools already ran in this turn so the same heavy tool is never executed twice.
-            val commandName = AgentToolExecutor.extractCommandName(responseContent)
+            val commandNames = AgentToolExecutor.extractAllCommandNames(responseContent)
             processAgentTurn(
                 messagesWithTool, sessionWithTool, inputs, specificExpenses, surplusData, depth + 1,
                 userGaConfig, comparisonContext,
-                executedCommands = if (commandName != null) executedCommands + commandName else executedCommands
+                executedCommands = executedCommands + commandNames
             )
         } else {
             // No tool used, turn ends

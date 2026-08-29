@@ -41,6 +41,14 @@ object AgentToolExecutor {
         return commandRegex.find(response)?.value
     }
 
+    /**
+     * Extracts ALL tool command names from an LLM response (a single reply may carry
+     * several commands, all of which get executed).
+     */
+    fun extractAllCommandNames(response: String): List<String> {
+        return commandRegex.findAll(response).map { it.value }.toList()
+    }
+
     suspend fun checkForToolUse(
         response: String,
         baseInputs: FinancialInput,
@@ -51,48 +59,66 @@ object AgentToolExecutor {
         alreadyExecutedCommands: Set<String> = emptySet(),
         llmRequest: suspend (String) -> String // Callback for Multi-Agent workflow
     ): String? {
-        // 1. Identify the command
-        val match = commandRegex.find(response) ?: return null
-        val command = match.value
+        // 1. Identify ALL commands: a single LLM response may legitimately carry several
+        // tool commands (e.g. read context, then simulate) and every one must execute.
+        val matches = commandRegex.findAll(response).toList()
+        if (matches.isEmpty()) return null
 
-        // 1.5 Re-execution guard: running the same heavy tool twice in one turn wastes
-        // several LLM calls and produces conflicting reports; the first output is authoritative.
-        if (command in alreadyExecutedCommands) {
-            return "**Tool $command was already executed in this turn.** Its full output is above in the conversation. " +
-                "Do not call it again — use that existing output to answer the user now."
+        val localExecuted = alreadyExecutedCommands.toMutableSet()
+        val outputs = mutableListOf<String>()
+        for (match in matches) {
+            val command = match.value
+
+            // Re-execution guard: running the same heavy tool twice in one turn wastes
+            // several LLM calls and produces conflicting reports; the first output is authoritative.
+            if (command in localExecuted) {
+                outputs += "**Tool $command was already executed in this turn.** Its full output is above in the conversation. " +
+                    "Do not call it again — use that existing output to answer the user now."
+                continue
+            }
+
+            val jsonParams = extractJsonParams(response, match.range.last + 1)
+            if (jsonParams.isNotEmpty()) {
+                AppDebugLog.add("Agent", "Extracted Params for $command: $jsonParams")
+            }
+
+            val output = try {
+                executeCommand(command, jsonParams, baseInputs, specificExpenses, surplusData, userGaConfig, comparisonContext, llmRequest)
+            } catch (e: Exception) {
+                "Tool execution failed: ${e.message}"
+            }
+            if (output != null) outputs += output
+            localExecuted.add(command)
         }
-        val startIndex = match.range.last + 1
+        return if (outputs.isEmpty()) null else outputs.joinToString("\n\n---\n\n")
+    }
 
-        // 2. Extract JSON parameters with brace counting to handle nested objects (e.g., curves)
-        var jsonParams = ""
+    private fun extractJsonParams(response: String, startIndex: Int): String {
         val jsonStartIndex = response.indexOf('{', startIndex)
-        
-        if (jsonStartIndex != -1) {
-            var braceCount = 0
-            var jsonEndIndex = -1
-            
-            for (i in jsonStartIndex until response.length) {
-                if (response[i] == '{') braceCount++
-                else if (response[i] == '}') braceCount--
-                
-                if (braceCount == 0) {
-                    jsonEndIndex = i + 1
-                    break
-                }
-            }
-            
-            if (jsonEndIndex != -1) {
-                jsonParams = response.substring(jsonStartIndex, jsonEndIndex)
-            }
-        }
-        
-        // Log the extracted JSON for debugging
-        if (jsonParams.isNotEmpty()) {
-            AppDebugLog.add("Agent", "Extracted Params for $command: $jsonParams")
-        }
+        if (jsonStartIndex == -1) return ""
 
-        return try {
-             when (command) {
+        var braceCount = 0
+        for (i in jsonStartIndex until response.length) {
+            if (response[i] == '{') braceCount++
+            else if (response[i] == '}') braceCount--
+            if (braceCount == 0) {
+                return response.substring(jsonStartIndex, i + 1)
+            }
+        }
+        return ""
+    }
+
+    private suspend fun executeCommand(
+        command: String,
+        jsonParams: String,
+        baseInputs: FinancialInput,
+        specificExpenses: List<SpecificExpense>,
+        surplusData: SurplusInput,
+        userGaConfig: GAConfigUI?,
+        comparisonContext: String?,
+        llmRequest: suspend (String) -> String
+    ): String? {
+        return when (command) {
                 "WEB_SEARCH" -> {
                     val query = extractStringParam(jsonParams, "query") ?: return null
                     "**Search Output:**\n" + SearchRepository.performWebSearch(query)
@@ -106,10 +132,15 @@ object AgentToolExecutor {
                 }
                 "GET_FINANCIAL_CONTEXT" -> {
                     val gson = Gson()
+                    val effective = baseInputs.withDefaultAssumptionCurves()
                     val contextData = mapOf(
                         "financialInput" to baseInputs,
                         "surplusInput" to surplusData,
-                        "specificExpenses" to specificExpenses
+                        "specificExpenses" to specificExpenses,
+                        "effectiveCurves" to mapOf(
+                            "utilityCurve" to effective.utilityCurvePoints,
+                            "degradationCurve" to effective.degradationCurvePoints
+                        )
                     )
                     "**Current Context:**\n```json\n" + gson.toJson(contextData) + "\n```"
                 }
@@ -130,9 +161,6 @@ object AgentToolExecutor {
                 }
                 else -> null
             }
-        } catch (e: Exception) {
-            "Tool execution failed: ${e.message}"
-        }
     }
     
     private fun extractStringParam(json: String, key: String): String? {

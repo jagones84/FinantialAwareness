@@ -95,6 +95,30 @@ class PromptDocumentationTest {
     }
 
     @Test
+    fun system_prompt_documents_assumption_curve_workflow() {
+        assertTrue(
+            "System prompt must tell the agent that GET_FINANCIAL_CONTEXT returns the effective curves",
+            prompt.contains("effective curves")
+        )
+        assertTrue(
+            "System prompt must clarify curve overrides are what-if only (no persistence to the Setup tab)",
+            prompt.contains("what-if only")
+        )
+    }
+
+    @Test
+    fun system_prompt_requires_literal_tool_command_emission() {
+        assertTrue(
+            "System prompt must forbid announcing a tool without emitting the literal command",
+            prompt.contains("Never merely announce")
+        )
+        assertTrue(
+            "System prompt must require the command token on a standalone line",
+            prompt.contains("standalone line")
+        )
+    }
+
+    @Test
     fun system_prompt_documents_optimization_modes_and_ga_overrides() {
         assertTrue(
             "RUN_OPTIMIZATION docs must expose the GUI optimization modes",
