@@ -1,13 +1,18 @@
 package com.example.daysurpopt.agent
 
+import com.example.daysurpopt.R
 import com.example.daysurpopt.data.SearchRepository
 import com.example.daysurpopt.domain.CurvePoint
 import com.example.daysurpopt.domain.FinancialInput
+import com.example.daysurpopt.domain.GAConfigUI
 import com.example.daysurpopt.domain.GAConfig
 import com.example.daysurpopt.domain.ParamsCandidate
 import com.example.daysurpopt.domain.SpecificExpense
 import com.example.daysurpopt.domain.SurplusInput
+import com.example.daysurpopt.logic.GoalSolverLogic
 import com.example.daysurpopt.logic.OptimizationLogic
+import com.example.daysurpopt.logic.ParetoKneeSelectionLogic
+import com.example.daysurpopt.logic.ParetoOptimizationLogic
 import com.example.daysurpopt.logic.calculateSimulationWithWeight
 import com.example.daysurpopt.utils.AppDebugLog
 import com.google.gson.Gson
@@ -17,6 +22,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /**
  * Executes tools requested by the AI agent (Simulations, Optimization, Web Search, etc.).
@@ -24,14 +30,16 @@ import kotlinx.coroutines.withContext
 object AgentToolExecutor {
 
     suspend fun checkForToolUse(
-        response: String, 
-        baseInputs: FinancialInput, 
-        specificExpenses: List<SpecificExpense>, 
+        response: String,
+        baseInputs: FinancialInput,
+        specificExpenses: List<SpecificExpense>,
         surplusData: SurplusInput,
+        userGaConfig: GAConfigUI? = null,
+        comparisonContext: String? = null,
         llmRequest: suspend (String) -> String // Callback for Multi-Agent workflow
     ): String? {
         // 1. Identify the command
-        val commandRegex = Regex("(WEB_SEARCH|RUN_SIMULATION|RUN_OPTIMIZATION|RUN_MULTI_AGENT_ANALYSIS|GET_TIME|FETCH_PAGE|GET_FINANCIAL_CONTEXT)")
+        val commandRegex = Regex("(WEB_SEARCH|RUN_SIMULATION|RUN_OPTIMIZATION|RUN_SENSITIVITY|RUN_MULTI_AGENT_ANALYSIS|RUN_RETIREMENT_SOLVER|GET_TIME|FETCH_PAGE|GET_FINANCIAL_CONTEXT)")
         val match = commandRegex.find(response) ?: return null
         val command = match.value
         val startIndex = match.range.last + 1
@@ -90,10 +98,16 @@ object AgentToolExecutor {
                     executeSimulation(jsonParams, baseInputs, specificExpenses, surplusData)
                 }
                 "RUN_OPTIMIZATION" -> {
-                    executeOptimization(jsonParams, baseInputs, specificExpenses, surplusData)
+                    executeOptimization(jsonParams, baseInputs, specificExpenses, surplusData, userGaConfig)
+                }
+                "RUN_RETIREMENT_SOLVER" -> {
+                    executeGoalSolver(jsonParams, baseInputs, specificExpenses, surplusData)
+                }
+                "RUN_SENSITIVITY" -> {
+                    executeSensitivity(jsonParams, baseInputs, specificExpenses, surplusData)
                 }
                 "RUN_MULTI_AGENT_ANALYSIS" -> {
-                    executeMultiAgentWorkflow(baseInputs, specificExpenses, surplusData, llmRequest)
+                    executeMultiAgentWorkflow(baseInputs, specificExpenses, surplusData, llmRequest, comparisonContext)
                 }
                 else -> null
             }
@@ -141,27 +155,86 @@ object AgentToolExecutor {
         }
     }
 
-    private suspend fun executeOptimization(json: String, baseInputs: FinancialInput, specificExpenses: List<SpecificExpense>, surplusData: SurplusInput): String {
-        AppDebugLog.add("Agent", "executeOptimization: $json")
+    private suspend fun executeSensitivity(json: String, baseInputs: FinancialInput, specificExpenses: List<SpecificExpense>, surplusData: SurplusInput): String {
+        AppDebugLog.add("Agent", "executeSensitivity: $json")
         return try {
-            val type = object : TypeToken<Map<String, Any>>() {}.type
-            val params: Map<String, Any> = if (json.isNotBlank()) Gson().fromJson(json, type) else emptyMap()
-            
+            val params: Map<String, Any> = if (json.isBlank()) {
+                emptyMap()
+            } else {
+                val type = object : TypeToken<Map<String, Any>>() {}.type
+                Gson().fromJson(json, type)
+            }
+
             val modifiedInputs = applyFinancialOverrides(baseInputs, params)
             val modifiedSurplus = applySurplusOverrides(surplusData, params)
             val modifiedSpecificExpenses = applySpecificExpenseOverrides(specificExpenses, params)
 
-            // Allow overriding GA config via JSON if needed, otherwise use default/safe values
-            val gaConfig = GAConfig(
-                popSize = 100,
-                generations = 50, // Increased to ensure convergence (was 20)
-                pc = 0.7,
-                pm = 0.08,
-                min = ParamsCandidate(0.0, modifiedInputs.etaAttuale, 0.0, modifiedInputs.etaAttuale),
-                max = ParamsCandidate(1.0, modifiedInputs.etaPensione, 1.0, modifiedInputs.etaMorte),
-                maximize = true
-            )
-            
+            val results = withContext(Dispatchers.Default) {
+                OptimizationLogic.runSensitivityAnalysis(modifiedInputs, modifiedSpecificExpenses, modifiedSurplus)
+            }
+
+            if (results.isEmpty()) {
+                "\n\n**Sensitivity Analysis:**\n- No sensitivity data: the base objective is non-positive."
+            } else {
+                "\n\n**Sensitivity Analysis:**\n" + results.joinToString("\n") { res ->
+                    val impact = String.format(Locale.US, "%.4f", res.scaledImpact)
+                    "- ${sensitivityName(res.nameResId)}: $impact pt / ${sensitivityUnit(res.unitResId)}"
+                }
+            }
+        } catch (e: Exception) {
+            AppDebugLog.add("Agent", "Sensitivity error: ${e.message}")
+            "Sensitivity analysis failed: ${e.message}"
+        }
+    }
+
+    private fun sensitivityName(resId: Int): String = when (resId) {
+        R.string.sens_p1 -> "P1 Saving Ratio"
+        R.string.sens_p2 -> "P2 End Savings Age"
+        R.string.sens_p3 -> "P3 Capital Spending Share"
+        R.string.sens_p4 -> "P4 Capital Spending Start"
+        R.string.sens_inheritance -> "Inheritance"
+        R.string.sens_keep -> "Capital to Keep"
+        R.string.sens_tfr -> "Net TFR"
+        R.string.sens_initial_cap -> "Initial Capital"
+        R.string.sens_int_rate -> "Interest Rate"
+        R.string.sens_debt_rate -> "Debt Interest Rate"
+        R.string.sens_utility_threshold -> "Utility Threshold"
+        R.string.sens_max_spending -> "Max Utility Spending"
+        R.string.sens_bonus_weight -> "Bonus Weight (w)"
+        R.string.sens_surplus -> "Daily Surplus"
+        else -> "Parameter"
+    }
+
+    private fun sensitivityUnit(resId: Int): String = when (resId) {
+        R.string.unit_pt_10 -> "10%"
+        R.string.unit_pt_year -> "year"
+        R.string.unit_pt_10k -> "10k€"
+        R.string.unit_pt_1pp -> "1pp"
+        R.string.unit_pt_001 -> "0.01"
+        R.string.unit_pt_100eur -> "100€ month"
+        R.string.unit_pt_01 -> "0.1"
+        else -> "unit"
+    }
+
+    private suspend fun executeOptimization(
+        json: String,
+        baseInputs: FinancialInput,
+        specificExpenses: List<SpecificExpense>,
+        surplusData: SurplusInput,
+        userGaConfig: GAConfigUI? = null
+    ): String {
+        AppDebugLog.add("Agent", "executeOptimization: $json")
+        return try {
+            val type = object : TypeToken<Map<String, Any>>() {}.type
+            val params: Map<String, Any> = if (json.isNotBlank()) Gson().fromJson(json, type) else emptyMap()
+
+            val modifiedInputs = applyFinancialOverrides(baseInputs, params)
+            val modifiedSurplus = applySurplusOverrides(surplusData, params)
+            val modifiedSpecificExpenses = applySpecificExpenseOverrides(specificExpenses, params)
+
+            val gaConfig = buildAgentGaConfig(params, modifiedInputs, userGaConfig)
+            val mode = (params["mode"] as? String)?.trim()?.uppercase(Locale.US) ?: "TRUE_SCALAR"
+
             // 1. Calculate Current Metrics
             val (currentObj, currentYears) = withContext(Dispatchers.Default) {
                 calculateSimulationWithWeight(modifiedInputs, modifiedSpecificExpenses, modifiedSurplus)
@@ -182,55 +255,212 @@ object AgentToolExecutor {
                 modifiedInputs.p4EtaAnticipataInizioSpesaCapitale
             )
 
-            val result = withContext(Dispatchers.Default) {
-                // 2. GA
-                val gaRes = OptimizationLogic.optimizeParameters(modifiedInputs, gaConfig, modifiedSpecificExpenses, modifiedSurplus, initialGuess)
-                // 3. Coordinate Search
-                OptimizationLogic.coordinateSearch(modifiedInputs, gaRes.bestParams, gaConfig, specificExpenses = modifiedSpecificExpenses, surplusData = modifiedSurplus)
-            }
-            
-            // 4. Calculate Optimized Metrics (for Stability Index)
-            val optInputs = modifiedInputs.copy(
-                p1SavingRatioSurplus = result.bestParams.p1,
-                p2EtaFineRisparmioNoCapitale = result.bestParams.p2,
-                p3PercentualeCapitaleDaSpendereAnnualmente = result.bestParams.p3,
-                p4EtaAnticipataInizioSpesaCapitale = result.bestParams.p4
-            )
-            val (optObj, optYears) = withContext(Dispatchers.Default) {
-                calculateSimulationWithWeight(optInputs, modifiedSpecificExpenses, modifiedSurplus)
-            }
-            val optUtilities = optYears.flatMap { year ->
-                if (year.monthlyUtilitySamples.isNotEmpty()) year.monthlyUtilitySamples else listOf(year.funzioneUtilita)
-            }
-            val optAvg = optUtilities.average()
-            val optStdDev = com.example.daysurpopt.logic.calculateStandardDeviation(optUtilities)
-            val optStability = AgentReportFormatter.computeStabilityIndex(optAvg, optStdDev)
-            
-            val gain = optObj - currentObj
+            when (mode) {
+                "PARETO_KNEE" -> {
+                    val front = withContext(Dispatchers.Default) {
+                        ParetoOptimizationLogic.optimizeParetoParameters(
+                            modifiedInputs, gaConfig, modifiedSpecificExpenses, modifiedSurplus
+                        )
+                    }
+                    val knee = withContext(Dispatchers.Default) {
+                        front.points.takeIf { it.isNotEmpty() }?.let { ParetoKneeSelectionLogic.selectKneePoint(it) }
+                    } ?: return "**Optimization Analysis (Pareto Knee Mode):**\n- Front Size: 0 (no feasible non-dominated points found)."
 
-            """
-            **Optimization Analysis (Current vs Optimized):**
-            
-            **1. Key Metrics:**
-            - **Objective Function**: ${"%.4f".format(currentObj)} -> **${"%.4f".format(optObj)}** (Gain: ${"%+.4f".format(gain)})
-            - **Stability Score**: ${"%.4f".format(currentStability)} -> **${"%.4f".format(optStability)}** (Higher is better)
-            - **Standard Deviation**: ${"%.4f".format(currentStdDev)} -> **${"%.4f".format(optStdDev)}**
-            
-            **2. Optimized Parameters:**
-            - **P1 (Savings Rate)**: ${"%.2f%%".format(modifiedInputs.p1SavingRatioSurplus * 100)} -> **${"%.2f%%".format(result.bestParams.p1 * 100)}**
-            - **P2 (Savings End Age)**: ${modifiedInputs.p2EtaFineRisparmioNoCapitale} -> **${result.bestParams.p2}**
-            - **P3 (Spending Rate)**: ${"%.2f%%".format(modifiedInputs.p3PercentualeCapitaleDaSpendereAnnualmente * 100)} -> **${"%.2f%%".format(result.bestParams.p3 * 100)}**
-            - **P4 (Spending Start Age)**: ${modifiedInputs.p4EtaAnticipataInizioSpesaCapitale} -> **${result.bestParams.p4}**
-            
-            **Analyst Verdict**: The optimized plan improves the objective score by ${"%.2f%%".format((gain/currentObj)*100)}.
-            """.trimIndent()
+                    formatParetoOutput("Pareto Knee Mode", front.points.size, knee, modifiedInputs)
+                }
+                "PARETO_FRONT" -> {
+                    val front = withContext(Dispatchers.Default) {
+                        ParetoOptimizationLogic.optimizeParetoParameters(
+                            modifiedInputs, gaConfig, modifiedSpecificExpenses, modifiedSurplus
+                        )
+                    }
+                    val best = front.points.maxByOrNull { it.avgUtility }
+                        ?: return "**Optimization Analysis (Pareto Front Mode):**\n- Front Size: 0 (no feasible non-dominated points found)."
+
+                    formatParetoOutput("Pareto Front Mode", front.points.size, best, modifiedInputs)
+                }
+                else -> executeScalarOptimization(
+                    modifiedInputs, gaConfig, modifiedSpecificExpenses, modifiedSurplus,
+                    initialGuess, currentObj, currentAvg, currentStdDev, currentStability
+                )
+            }
         } catch (e: Exception) {
             "Optimization failed: ${e.message}"
         }
     }
-    
-    // --- Helper Functions for Parameter Mapping ---
 
+    private fun formatParetoOutput(
+        modeLabel: String,
+        frontSize: Int,
+        point: com.example.daysurpopt.domain.ParetoPoint,
+        baseInputs: FinancialInput
+    ): String {
+        val stability = AgentReportFormatter.computeStabilityIndex(point.avgUtility, point.stdDevUtility)
+        return """
+            **Optimization Analysis ($modeLabel):**
+
+            **1. Key Metrics:**
+            - **Front Size**: $frontSize
+            - **Selected Point**: Avg Utility ${"%.4f".format(Locale.US, point.avgUtility)}, Std Dev ${"%.4f".format(Locale.US, point.stdDevUtility)}
+            - **Stability Score**: ${"%.4f".format(Locale.US, stability)}
+
+            **2. Selected Parameters:**
+            - **P1 (Savings Rate)**: ${"%.2f%%".format(point.params.p1 * 100)}
+            - **P2 (Savings End Age)**: ${point.params.p2}
+            - **P3 (Spending Rate)**: ${"%.2f%%".format(point.params.p3 * 100)}
+            - **P4 (Spending Start Age)**: ${point.params.p4}
+
+            **3. Reference Plan (unoptimized):**
+            - **P1**: ${"%.2f%%".format(baseInputs.p1SavingRatioSurplus * 100)}, **P2**: ${baseInputs.p2EtaFineRisparmioNoCapitale}, **P3**: ${"%.2f%%".format(baseInputs.p3PercentualeCapitaleDaSpendereAnnualmente * 100)}, **P4**: ${baseInputs.p4EtaAnticipataInizioSpesaCapitale}
+        """.trimIndent()
+    }
+
+    private suspend fun executeScalarOptimization(
+        modifiedInputs: FinancialInput,
+        gaConfig: com.example.daysurpopt.domain.GAConfig,
+        modifiedSpecificExpenses: List<SpecificExpense>,
+        modifiedSurplus: SurplusInput,
+        initialGuess: ParamsCandidate,
+        currentObj: Double,
+        currentAvg: Double,
+        currentStdDev: Double,
+        currentStability: Double
+    ): String {
+        val result = withContext(Dispatchers.Default) {
+            // 2. GA
+            val gaRes = OptimizationLogic.optimizeParameters(modifiedInputs, gaConfig, modifiedSpecificExpenses, modifiedSurplus, initialGuess)
+            // 3. Coordinate Search
+            OptimizationLogic.coordinateSearch(modifiedInputs, gaRes.bestParams, gaConfig, specificExpenses = modifiedSpecificExpenses, surplusData = modifiedSurplus)
+        }
+
+        // 4. Calculate Optimized Metrics (for Stability Index)
+        val optInputs = modifiedInputs.copy(
+            p1SavingRatioSurplus = result.bestParams.p1,
+            p2EtaFineRisparmioNoCapitale = result.bestParams.p2,
+            p3PercentualeCapitaleDaSpendereAnnualmente = result.bestParams.p3,
+            p4EtaAnticipataInizioSpesaCapitale = result.bestParams.p4
+        )
+        val (optObj, optYears) = withContext(Dispatchers.Default) {
+            calculateSimulationWithWeight(optInputs, modifiedSpecificExpenses, modifiedSurplus)
+        }
+        val optUtilities = optYears.flatMap { year ->
+            if (year.monthlyUtilitySamples.isNotEmpty()) year.monthlyUtilitySamples else listOf(year.funzioneUtilita)
+        }
+        val optAvg = optUtilities.average()
+        val optStdDev = com.example.daysurpopt.logic.calculateStandardDeviation(optUtilities)
+        val optStability = AgentReportFormatter.computeStabilityIndex(optAvg, optStdDev)
+
+        val gain = optObj - currentObj
+
+        return """
+        **Optimization Analysis (Current vs Optimized):**
+
+        **1. Key Metrics:**
+        - **Objective Function**: ${"%.4f".format(Locale.US, currentObj)} -> **${"%.4f".format(Locale.US, optObj)}** (Gain: ${"%+.4f".format(Locale.US, gain)})
+        - **Stability Score**: ${"%.4f".format(Locale.US, currentStability)} -> **${"%.4f".format(Locale.US, optStability)}** (Higher is better)
+        - **Standard Deviation**: ${"%.4f".format(Locale.US, currentStdDev)} -> **${"%.4f".format(Locale.US, optStdDev)}**
+
+        **2. Optimized Parameters:**
+        - **P1 (Savings Rate)**: ${"%.2f%%".format(modifiedInputs.p1SavingRatioSurplus * 100)} -> **${"%.2f%%".format(result.bestParams.p1 * 100)}**
+        - **P2 (Savings End Age)**: ${modifiedInputs.p2EtaFineRisparmioNoCapitale} -> **${result.bestParams.p2}**
+        - **P3 (Spending Rate)**: ${"%.2f%%".format(modifiedInputs.p3PercentualeCapitaleDaSpendereAnnualmente * 100)} -> **${"%.2f%%".format(result.bestParams.p3 * 100)}**
+        - **P4 (Spending Start Age)**: ${modifiedInputs.p4EtaAnticipataInizioSpesaCapitale} -> **${result.bestParams.p4}**
+
+        **Analyst Verdict**: The optimized plan improves the objective score by ${"%.2f%%".format(Locale.US, (gain / currentObj) * 100)}.
+        """.trimIndent()
+    }
+
+    /**
+     * Builds the GA config for agent optimization: defaults to the user's GUI GA config
+     * (same popSize/generations/pc/pm/ranges the GUI optimizer would use), with optional
+     * per-call JSON overrides for popSize/generations/pc/pm.
+     */
+    private fun buildAgentGaConfig(
+        params: Map<String, Any>,
+        inputs: FinancialInput,
+        userGaConfig: GAConfigUI?
+    ): com.example.daysurpopt.domain.GAConfig {
+        val base = userGaConfig?.let { OptimizationLogic.parseGaConfig(it, inputs) }
+            ?: com.example.daysurpopt.domain.GAConfig(
+                popSize = 100,
+                generations = 50,
+                pc = 0.7,
+                pm = 0.08,
+                min = ParamsCandidate(0.0, inputs.etaAttuale, 0.0, inputs.etaAttuale),
+                max = ParamsCandidate(1.0, inputs.etaPensione, 1.0, inputs.etaMorte),
+                maximize = true
+            )
+
+        fun num(key: String): Double? = when (val value = params[key]) {
+            is Number -> value.toDouble()
+            is String -> value.replace(',', '.').toDoubleOrNull()
+            else -> null
+        }
+
+        return base.copy(
+            popSize = num("popSize")?.toInt()?.coerceAtLeast(2) ?: base.popSize,
+            generations = num("generations")?.toInt()?.coerceAtLeast(1) ?: base.generations,
+            pc = num("pc")?.coerceIn(0.0, 1.0) ?: base.pc,
+            pm = num("pm")?.coerceIn(0.0, 1.0) ?: base.pm
+        )
+    }
+    
+    private suspend fun executeGoalSolver(
+        json: String,
+        baseInputs: FinancialInput,
+        specificExpenses: List<SpecificExpense>,
+        surplusData: SurplusInput
+    ): String {
+        AppDebugLog.add("Agent", "executeGoalSolver: $json")
+        return try {
+            val type = object : TypeToken<Map<String, Any>>() {}.type
+            val params: Map<String, Any> = Gson().fromJson(json, type)
+
+            val stopWorkAge = when (val value = params["stopWorkAge"]) {
+                is Number -> value.toInt()
+                is String -> value.toIntOrNull()
+                else -> null
+            } ?: return "Goal Solver failed: missing integer parameter 'stopWorkAge'."
+
+            val threshold = when (val value = params["happinessThreshold"]) {
+                is Number -> value.toDouble()
+                is String -> value.replace(',', '.').toDoubleOrNull()
+                else -> null
+            } ?: return "Goal Solver failed: missing number parameter 'happinessThreshold'."
+
+            // Same override semantics as RUN_SIMULATION: the LLM can adjust any input
+            // (e.g. zero the pension income for a pure capital-based plan) before solving.
+            val modifiedInputs = applyFinancialOverrides(baseInputs, params)
+            val modifiedSurplus = applySurplusOverrides(surplusData, params)
+            val modifiedExpenses = applySpecificExpenseOverrides(specificExpenses, params)
+
+            val result = withContext(Dispatchers.Default) {
+                GoalSolverLogic.solveMinimumInitialCapital(
+                    baseInputs = modifiedInputs,
+                    specificExpenses = modifiedExpenses,
+                    surplusData = modifiedSurplus,
+                    stopWorkAge = stopWorkAge,
+                    threshold = threshold
+                )
+            }
+
+            val status = if (result.isFeasible) "Feasible" else "Infeasible"
+            val capital = result.requiredCapital?.let { "%.2f".format(Locale.US, it) } ?: "N/A"
+            val reason = result.reason?.let { "\n- Reason: $it" } ?: ""
+
+            "\n\n**Goal Solver Result:**\n" +
+                    "- Required Initial Capital: $capital\n" +
+                    "- Stop Work Age: $stopWorkAge\n" +
+                    "- Happiness Threshold: ${"%.4f".format(Locale.US, threshold)}\n" +
+                    "- Max Achievable Utility: ${"%.4f".format(Locale.US, result.maxAchievableUtility)}\n" +
+                    "- Status: $status" + reason
+        } catch (e: Exception) {
+            AppDebugLog.add("Agent", "Goal Solver error: ${e.message}")
+            "Goal Solver failed: ${e.message}"
+        }
+    }
+
+    // --- Helper Functions for Parameter Mapping ---
     private fun applyFinancialOverrides(base: FinancialInput, params: Map<String, Any>): FinancialInput {
         var inputs = base.copy()
         
@@ -412,10 +642,11 @@ object AgentToolExecutor {
     }
 
     private suspend fun executeMultiAgentWorkflow(
-        baseInputs: FinancialInput, 
-        specificExpenses: List<SpecificExpense>, 
+        baseInputs: FinancialInput,
+        specificExpenses: List<SpecificExpense>,
         surplusData: SurplusInput,
-        llmRequest: suspend (String) -> String
+        llmRequest: suspend (String) -> String,
+        comparisonContext: String? = null
     ): String {
         return try {
             coroutineScope {
@@ -436,10 +667,10 @@ object AgentToolExecutor {
                 """.trimIndent()
 
                 // Agent 1: Sustainability & Growth
-                val sustainabilityPrompt = AgentPrompts.getSustainabilityPrompt(baseInputs, commonFinancialContext)
+                val sustainabilityPrompt = AgentPrompts.getSustainabilityPrompt(baseInputs, commonFinancialContext, comparisonContext ?: "")
 
                 // Agent 2: Risk & Stability
-                val riskPrompt = AgentPrompts.getRiskPrompt(baseInputs, commonFinancialContext)
+                val riskPrompt = AgentPrompts.getRiskPrompt(baseInputs, commonFinancialContext, comparisonContext ?: "")
 
                 // Agent 3: Analyst & Optimizer (Runs hard calculations)
                 val analystDeferred = async {
@@ -472,7 +703,7 @@ object AgentToolExecutor {
                     sustainabilityReport = results[0],
                     riskReport = results[1],
                     analystReport = results[2],
-                    isComparing = false,
+                    isComparing = comparisonContext != null,
                     locale = java.util.Locale.getDefault()
                 )
 

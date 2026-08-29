@@ -134,7 +134,14 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
      * @param specificExpenses Current specific expenses for context.
      * @param surplusData Current surplus data for context.
      */
-    fun sendMessage(content: String, currentInputs: FinancialInput, specificExpenses: List<SpecificExpense>, surplusData: SurplusInput) {
+    fun sendMessage(
+        content: String,
+        currentInputs: FinancialInput,
+        specificExpenses: List<SpecificExpense>,
+        surplusData: SurplusInput,
+        userGaConfig: GAConfigUI? = null,
+        comparisonContext: String? = null
+    ) {
         AppDebugLog.add("Agent", "sendMessage: $content")
         if (!PrivacyConsentRepository.isGranted(getApplication())) {
             val session = currentSession.value ?: run {
@@ -175,7 +182,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             isLoading.value = true
             try {
                 // Initial recursive call
-                processAgentTurn(updatedMessages, updatedSession, currentInputs, specificExpenses, surplusData, 0)
+                processAgentTurn(updatedMessages, updatedSession, currentInputs, specificExpenses, surplusData, 0, userGaConfig, comparisonContext)
             } catch (e: Exception) {
                 val errorMessage = ChatMessage(
                     id = UUID.randomUUID().toString(),
@@ -229,7 +236,9 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         inputs: FinancialInput,
         specificExpenses: List<SpecificExpense>,
         surplusData: SurplusInput,
-        depth: Int
+        depth: Int,
+        userGaConfig: GAConfigUI? = null,
+        comparisonContext: String? = null
     ) {
         if (depth > 5) { // Prevent infinite loops
              val stopMessage = ChatMessage(
@@ -262,16 +271,18 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
 
         // Check for tools
         val toolResult = AgentToolExecutor.checkForToolUse(
-            response = responseContent, 
-            baseInputs = inputs, 
-            specificExpenses = specificExpenses, 
+            response = responseContent,
+            baseInputs = inputs,
+            specificExpenses = specificExpenses,
             surplusData = surplusData,
+            userGaConfig = userGaConfig,
+            comparisonContext = comparisonContext,
             llmRequest = { prompt ->
                 generateResponse(
-                    messages = listOf(ChatMessage("", "user", "Execute analysis.", 0)), 
-                    inputs = inputs, 
-                    specificExpenses = specificExpenses, 
-                    surplusData = surplusData, 
+                    messages = listOf(ChatMessage("", "user", "Execute analysis.", 0)),
+                    inputs = inputs,
+                    specificExpenses = specificExpenses,
+                    surplusData = surplusData,
                     systemOverride = prompt
                 )
             }
@@ -291,7 +302,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             ChatRepository.updateSession(getApplication(), sessionWithTool)
             
             // Recurse: Agent sees tool result and decides next step
-            processAgentTurn(messagesWithTool, sessionWithTool, inputs, specificExpenses, surplusData, depth + 1)
+            processAgentTurn(messagesWithTool, sessionWithTool, inputs, specificExpenses, surplusData, depth + 1, userGaConfig, comparisonContext)
         } else {
             // No tool used, turn ends
         }

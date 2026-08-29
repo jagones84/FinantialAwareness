@@ -243,6 +243,21 @@
     <string name="section_data_input">1. Data Input &amp; Setup</string>
     <string name="section_optimization_config">2. Optimization Configuration</string>
     <string name="section_analysis_actions">3. Analysis &amp; Actions</string>
+
+    <!-- Goal Solver -->
+    <string name="goal_solver_button">Goal Solver (Capital Needed)</string>
+    <string name="goal_solver_title">Goal Solver</string>
+    <string name="goal_solver_description">Computes the minimum initial capital needed to stop working at the given age while keeping happiness at or above the threshold. Uses your current income, expenses and assumptions.</string>
+    <string name="goal_solver_stop_age">Stop Work Age</string>
+    <string name="goal_solver_threshold">Happiness Threshold (0–1)</string>
+    <string name="goal_solver_solve">Solve</string>
+    <string name="goal_solver_solving">Solving…</string>
+    <string name="goal_solver_required_capital">Required Initial Capital</string>
+    <string name="goal_solver_max_utility">Max Achievable Utility</string>
+    <string name="goal_solver_apply">Apply to Initial Capital</string>
+    <string name="goal_solver_infeasible">Goal not reachable with the current plan.</string>
+    <string name="goal_solver_invalid_age">Stop age must be between your current age and death age.</string>
+    <string name="goal_solver_close">Close</string>
     <string name="section_utilities">4. Utilities &amp; Management</string>
     <string name="simulation_results_title">Simulation Results</string>
     <string name="optimizing">Optimizing...</string>

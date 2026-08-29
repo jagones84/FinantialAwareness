@@ -49,8 +49,8 @@ object AgentPrompts {
             
             **Context**:
             - Weight (w): ${baseInputs.bonusStdWeight}
-            - Stability Index definition: StdDev / (Weight/100).
-            - Objective stability reward term: AvgUtility / StdDev.
+            - StabilityScore definition: Avg / (Avg + StdDev), bounded in [0, 1].
+            - Objective (True Scalar): fScalar = Avg * ((1 - w) + w * StabilityScore) — stability can only penalize, never inflate the objective above AvgUtility.
             $commonFinancialContext
             $comparisonContext
             

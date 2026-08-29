@@ -6,7 +6,11 @@ import com.example.daysurpopt.domain.OptimizationMarkerSnapshot
 import com.example.daysurpopt.domain.ParamsCandidate
 import com.example.daysurpopt.domain.ParetoFrontResult
 import com.example.daysurpopt.domain.ParetoPoint
+import com.example.daysurpopt.domain.SurplusInput
+import com.example.daysurpopt.logic.GoalSolverResult
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OptimizationModeFlowTest {
@@ -152,5 +156,81 @@ class OptimizationModeFlowTest {
         assertEquals(0.77, cleared.currentWeight, 1e-9)
         assertEquals(0, cleared.simulationResultsCount)
         assertEquals(0, cleared.sensitivityResultsCount)
+    }
+
+    @Test
+    fun clearAnalysisState_resets_goal_solver_result() {
+        val state = AnalysisUiState(
+            objectiveFunctionValue = null,
+            optimizationResult = null,
+            paretoFrontResult = null,
+            selectedParetoPoint = null,
+            appliedParetoSnapshot = null,
+            lastTrueScalarSnapshot = null,
+            lastParetoCompromiseSnapshot = null,
+            lastParetoReferenceSnapshot = null,
+            simulationResultsCount = 0,
+            sensitivityResultsCount = 0,
+            goalSolverResult = GoalSolverResult(
+                requiredCapital = 275390.63,
+                isFeasible = true,
+                reason = null,
+                threshold = 0.3,
+                stopWorkAge = 45,
+                maxAchievableUtility = 0.2951
+            )
+        )
+
+        val cleared = clearAnalysisStateForTest(state)
+
+        assertEquals(null, cleared.goalSolverResult)
+    }
+
+    @Test
+    fun goalSolverInputValidation_acceptsOnlyValidAgesAndThresholds() {
+        assertTrue(isGoalSolverInputValid(etaAttuale = 30, etaMorte = 82, stopWorkAge = 30, threshold = 0.3))
+        assertTrue(isGoalSolverInputValid(etaAttuale = 30, etaMorte = 82, stopWorkAge = 81, threshold = 0.3))
+        assertFalse(isGoalSolverInputValid(etaAttuale = 30, etaMorte = 82, stopWorkAge = 82, threshold = 0.3))
+        assertFalse(isGoalSolverInputValid(etaAttuale = 30, etaMorte = 82, stopWorkAge = 29, threshold = 0.3))
+        assertFalse(isGoalSolverInputValid(etaAttuale = 30, etaMorte = 82, stopWorkAge = 45, threshold = 0.0))
+        assertFalse(isGoalSolverInputValid(etaAttuale = 30, etaMorte = 82, stopWorkAge = 45, threshold = 1.0))
+        assertTrue(isGoalSolverInputValid(etaAttuale = 30, etaMorte = 82, stopWorkAge = 45, threshold = 0.99))
+    }
+
+    @Test
+    fun comparisonAgentContext_isNull_withoutProfile2() {
+        val context = buildComparisonContextForAgent(
+            profile1Name = "P1",
+            profile2Name = "P2",
+            p1Inputs = FinancialInput(etaAttuale = 40, capitaleIniziale = 10000.0),
+            p2Inputs = null,
+            p2Surplus = null,
+            p1AvgUtility = 0.30,
+            p2AvgUtility = null
+        )
+        assertEquals(null, context)
+    }
+
+    @Test
+    fun comparisonAgentContext_containsBothProfilesAndMetrics() {
+        val p2Surplus = SurplusInput(stipendioMensile = 3000.0)
+        val context = buildComparisonContextForAgent(
+            profile1Name = "Anna",
+            profile2Name = "Bruno",
+            p1Inputs = FinancialInput(etaAttuale = 40, capitaleIniziale = 10000.0, etaPensione = 65, etaMorte = 82),
+            p2Inputs = FinancialInput(etaAttuale = 42, capitaleIniziale = 25000.0, etaPensione = 62, etaMorte = 85),
+            p2Surplus = p2Surplus,
+            p1AvgUtility = 0.3123,
+            p2AvgUtility = 0.4567
+        )
+
+        assertTrue(context != null)
+        assertTrue(context!!.contains("COMPARISON MODE ACTIVE"))
+        assertTrue(context.contains("Anna"))
+        assertTrue(context.contains("Bruno"))
+        assertTrue(context.contains("25000.0"))
+        assertTrue(context.contains("0.3123"))
+        assertTrue(context.contains("0.4567"))
+        assertTrue(context.contains("3000.0"))
     }
 }

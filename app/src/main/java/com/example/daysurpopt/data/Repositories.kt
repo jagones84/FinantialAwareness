@@ -54,6 +54,21 @@ object PrivacyConsentRepository {
     }
 }
 
+object QuickStartRepository {
+    private const val PREFS_NAME = "QuickStartPrefs"
+    private const val KEY_SEEN = "QuickStartSeen"
+
+    fun hasSeenQuickStart(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_SEEN, false)
+    }
+
+    fun markQuickStartSeen(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_SEEN, true) }
+    }
+}
+
 object FinancialDataRepository {
     private const val PREFS_NAME = "FinancialPrefs"
     private const val KEY_INPUTS = "FinancialInputs"

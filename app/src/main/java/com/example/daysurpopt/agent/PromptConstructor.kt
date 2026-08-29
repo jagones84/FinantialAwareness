@@ -84,6 +84,7 @@ object PromptConstructor {
               - `tfrNetto` (Net Severance Pay)
               - `capitaleIniziale` (Initial Capital)
               - `valoreSpesaGiornalieraMaxUtilita` (Max Daily Spend for Utility)
+              - `sogliaMinimaFunzioneUtilita` (Minimum Happiness/Utility Threshold: the engine forces the monthly spend needed to reach it, drawing capital)
               - `etaAttuale`, `etaPensione`, `etaRicevimentoEredita`, `etaMorte`
               - `p1SavingRatioSurplus`, `p2EtaFineRisparmioNoCapitale`
               - `p3PercentualeCapitaleDaSpendereAnnualmente`, `p4EtaAnticipataInizioSpesaCapitale`
@@ -101,9 +102,18 @@ object PromptConstructor {
               Allowed params (Una Tantum):
               - `specificExpenses`: List of {age, amount, utilityOffset} (e.g., `[{"age":40, "amount":10000.0, "utilityOffset":0.0}]`)
 
-            - `RUN_OPTIMIZATION {param: value}`: Run GA + Coordinate Search to find best parameters. Supports same overrides as simulation. `bonusStdWeight` is allowed as a fixed scenario input, but the optimizer still searches only `P1..P4`.
+            - `RUN_OPTIMIZATION {param: value}`: Run the optimizer to find best parameters. Supports same overrides as simulation. `bonusStdWeight` is allowed as a fixed scenario input, but the optimizer still searches only `P1..P4`.
+              - `mode` (optional, default `TRUE_SCALAR`): the optimization strategy, mirroring the GUI.
+                * `TRUE_SCALAR`: maximizes `fScalar = Avg * ((1 - w) + w * StabilityScore)` via GA + coordinate search.
+                * `PARETO_KNEE`: runs a multi-objective GA (Avg vs StdDev) and selects the knee point (best trade-off on the Pareto front, closest to the ideal top-left corner).
+                * `PARETO_FRONT`: runs the multi-objective GA and returns the full Pareto front for the user to explore.
+              - GA config overrides (optional, when the user asks for a faster or bigger run): `popSize`, `generations`, `pc` (crossover probability), `pm` (mutation probability). If omitted, the user's current GUI GA configuration is used.
+              - Example: `RUN_OPTIMIZATION {"mode": "PARETO_KNEE", "tassoGuadagnoInteresse": 0.04, "popSize": 60, "generations": 50}`
+            - `RUN_RETIREMENT_SOLVER {"stopWorkAge": X, "happinessThreshold": T}`: Inverse analysis. Computes the MINIMUM initial capital needed to stop working at age X (all JSON input overrides supported, e.g. `"pensioneMensileNetta": 0.0` for a pure capital-based plan) while keeping utility >= T at every age. Use it when the user asks questions like "how much do I need to accumulate to stop working with happiness 0.3?". If infeasible, the output reports the maximum achievable utility and why.
+            - `RUN_SENSITIVITY {overrides}`: One-at-a-time sensitivity analysis on the current scenario. Accepts the same JSON overrides as `RUN_SIMULATION` (e.g. `{"tassoGuadagnoInteresse": 0.04}` to analyze a 4% interest scenario). Returns, for each parameter (P1..P4, interest/debt rates, inheritance, capital to keep, TFR, initial capital, utility threshold, max utility spending, weight w, daily surplus), how much the objective function changes per unit step, ranked by absolute impact. Use it when the user asks "which parameter influences my result the most?" or "is my plan sensitive to X?".
             - `RUN_MULTI_AGENT_ANALYSIS`: Launch the 3+1 agent parallel workflow for deep reporting.
             - `WEB_SEARCH {query: "..."}`: Search online.
+            - `FETCH_PAGE {url: "..."}`: Fetch and read the text content of a specific web page (use after WEB_SEARCH to read a promising result).
             - `GET_TIME`: Get current time.
             
             **Important**: Do not provide search results or simulation data yourself; the system will append the tool output to your message.

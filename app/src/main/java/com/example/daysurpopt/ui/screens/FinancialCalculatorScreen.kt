@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +35,8 @@ import java.util.Locale
 @Composable
 fun FinancialCalculatorScreen(
     navController: NavController,
-    viewModel: FinancialViewModel
+    viewModel: FinancialViewModel,
+    onShowQuickStart: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showProfilesDialog by remember { mutableStateOf(false) }
@@ -94,7 +96,12 @@ fun FinancialCalculatorScreen(
         onLanguageChange = { lang ->
             LanguageRepository.saveLanguage(context, lang)
             (context as? android.app.Activity)?.recreate()
-        }
+        },
+        goalSolverRunning = viewModel.goalSolverRunning,
+        goalSolverResult = viewModel.goalSolverResult,
+        onRunGoalSolver = { stopAge, threshold -> viewModel.runGoalSolver(stopAge, threshold) },
+        onApplyGoalSolver = { viewModel.applyGoalSolverCapital() },
+        onShowQuickStart = onShowQuickStart
     )
 }
 
@@ -127,10 +134,16 @@ fun FinancialCalculatorContent(
     onResetInputs: () -> Unit,
     onExportPdf: () -> Unit,
     onExitCompareMode: () -> Unit,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    goalSolverRunning: Boolean = false,
+    goalSolverResult: com.example.daysurpopt.logic.GoalSolverResult? = null,
+    onRunGoalSolver: (Int, Double) -> Unit = { _, _ -> },
+    onApplyGoalSolver: () -> Unit = {},
+    onShowQuickStart: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     var showLanguageMenu by remember { mutableStateOf(false) }
+    var showGoalSolverDialog by remember { mutableStateOf(false) }
     val displayedMode = optimizationResult?.mode ?: optimizationMode
 
     Scaffold(
@@ -138,6 +151,12 @@ fun FinancialCalculatorContent(
             TopAppBar(
                 title = { Text(stringResource(R.string.financial_calculator_title)) },
                 actions = {
+                    IconButton(onClick = onShowQuickStart) {
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = stringResource(R.string.quick_start_guide)
+                        )
+                    }
                     IconButton(onClick = { showLanguageMenu = true }) {
                         Icon(Icons.Default.Info, contentDescription = stringResource(R.string.select_language))
                     }
@@ -227,6 +246,10 @@ fun FinancialCalculatorContent(
             // Section 1: Data Input & Setup
             MainSectionCard(title = stringResource(R.string.section_data_input)) {
                 MenuButton(
+                    onClick = { onNavigate("surplusCalculator") },
+                    text = stringResource(R.string.daily_surplus_calculator_title)
+                )
+                MenuButton(
                     onClick = { onNavigate("userData") },
                     text = stringResource(R.string.user_data_button)
                 )
@@ -299,7 +322,12 @@ fun FinancialCalculatorContent(
                     onClick = { onNavigate("optimizationParams") },
                     text = stringResource(R.string.optimization_parameters_title)
                 )
-                
+
+                MenuButton(
+                    onClick = { showGoalSolverDialog = true },
+                    text = stringResource(R.string.goal_solver_button)
+                )
+
                 OutlinedButton(
                     onClick = onRunSimulation,
                     modifier = Modifier.fillMaxWidth(),
@@ -718,6 +746,119 @@ fun FinancialCalculatorContent(
             )
         }
     }
+
+    if (showGoalSolverDialog) {
+        GoalSolverDialog(
+            inputs = inputs,
+            running = goalSolverRunning,
+            result = goalSolverResult,
+            onSolve = onRunGoalSolver,
+            onApply = {
+                onApplyGoalSolver()
+                showGoalSolverDialog = false
+            },
+            onDismiss = { showGoalSolverDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun GoalSolverDialog(
+    inputs: com.example.daysurpopt.domain.FinancialInput,
+    running: Boolean,
+    result: com.example.daysurpopt.logic.GoalSolverResult?,
+    onSolve: (Int, Double) -> Unit,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var stopAgeText by remember { mutableStateOf(inputs.etaPensione.toString()) }
+    var thresholdText by remember { mutableStateOf(String.format(java.util.Locale.US, "%.2f", inputs.sogliaMinimaFunzioneUtilita)) }
+
+    val stopAge = stopAgeText.trim().toIntOrNull()
+    val threshold = thresholdText.replace(',', '.').toDoubleOrNull()
+    val inputValid = stopAge != null && threshold != null &&
+        isGoalSolverInputValid(inputs.etaAttuale, inputs.etaMorte, stopAge, threshold)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.goal_solver_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.goal_solver_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = stopAgeText,
+                    onValueChange = { stopAgeText = it.filter { ch -> ch.isDigit() } },
+                    label = { Text(stringResource(R.string.goal_solver_stop_age)) },
+                    isError = stopAge != null && !isGoalSolverInputValid(inputs.etaAttuale, inputs.etaMorte, stopAge, threshold ?: 0.5),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = thresholdText,
+                    onValueChange = { thresholdText = it },
+                    label = { Text(stringResource(R.string.goal_solver_threshold)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (stopAge != null && !isGoalSolverInputValid(inputs.etaAttuale, inputs.etaMorte, stopAge, threshold ?: 0.5)) {
+                    Text(
+                        text = stringResource(R.string.goal_solver_invalid_age),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Button(
+                    onClick = { onSolve(stopAge!!, threshold!!) },
+                    enabled = inputValid && !running,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (running) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.goal_solver_solving))
+                    } else {
+                        Text(stringResource(R.string.goal_solver_solve))
+                    }
+                }
+                result?.let { goalResult ->
+                    HorizontalDivider()
+                    Text(
+                        text = stringResource(R.string.goal_solver_max_utility) + ": " +
+                            String.format(java.util.Locale.US, "%.4f", goalResult.maxAchievableUtility),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (goalResult.isFeasible && goalResult.requiredCapital != null) {
+                        Text(
+                            text = stringResource(R.string.goal_solver_required_capital) + ": " +
+                                String.format(java.util.Locale.US, "%.2f", goalResult.requiredCapital) + " €",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Button(
+                            onClick = onApply,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.goal_solver_apply))
+                        }
+                    } else {
+                        Text(
+                            text = goalResult.reason ?: stringResource(R.string.goal_solver_infeasible),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.goal_solver_close)) }
+        }
+    )
 }
 
 @Composable

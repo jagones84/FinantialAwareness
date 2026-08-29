@@ -72,6 +72,8 @@ fun AgentScreen(
     inputs: FinancialInput,
     specificExpenses: List<SpecificExpense>,
     surplusData: SurplusInput,
+    gaConfig: com.example.daysurpopt.domain.GAConfigUI? = null,
+    comparisonContext: String? = null,
     onBack: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -219,7 +221,9 @@ fun ChatView(
     viewModel: AgentViewModel,
     inputs: FinancialInput,
     specificExpenses: List<SpecificExpense>,
-    surplusData: SurplusInput
+    surplusData: SurplusInput,
+    gaConfig: com.example.daysurpopt.domain.GAConfigUI? = null,
+    comparisonContext: String? = null
 ) {
     val session = viewModel.currentSession.value ?: return
     var inputText by remember { mutableStateOf("") }
@@ -298,7 +302,7 @@ fun ChatView(
             IconButton(
                 onClick = {
                     if (inputText.isNotBlank()) {
-                        viewModel.sendMessage(inputText, inputs, specificExpenses, surplusData)
+                        viewModel.sendMessage(inputText, inputs, specificExpenses, surplusData, gaConfig, comparisonContext)
                         inputText = ""
                     }
                 },

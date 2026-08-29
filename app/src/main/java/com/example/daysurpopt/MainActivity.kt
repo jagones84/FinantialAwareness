@@ -14,9 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -39,7 +38,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.filled.Face
 import com.example.daysurpopt.data.LanguageRepository
 import com.example.daysurpopt.data.PrivacyConsentRepository
+import com.example.daysurpopt.data.QuickStartRepository
 import com.example.daysurpopt.data.SurplusDataRepository
+import com.example.daysurpopt.ui.dialogs.QuickStartDialog
 import com.example.daysurpopt.ui.theme.ConsapevolezzaFinanziariaTheme
 import com.example.daysurpopt.utils.AppDebugLog
 import com.example.daysurpopt.domain.FinancialInput
@@ -102,10 +103,11 @@ class MainActivity : ComponentActivity() {
                 val financialViewModel: FinancialViewModel = viewModel()
                 val consentDecisionExists = remember { mutableStateOf(PrivacyConsentRepository.hasDecision(this)) }
                 val isConsentGranted = remember { mutableStateOf(PrivacyConsentRepository.isGranted(this)) }
+                val quickStartSeen = remember { mutableStateOf(QuickStartRepository.hasSeenQuickStart(this)) }
                 val backStackEntry = navController.currentBackStackEntryAsState().value
                 val currentRoute = backStackEntry?.destination?.route
 
-                val bottomRoutes = setOf("financialCalculator", "surplusCalculator", "charts", "agent", "assumptions", "debugLog")
+                val bottomRoutes = setOf("financialCalculator", "charts", "agent", "assumptions", "debugLog")
                 val showBottomBar = currentRoute in bottomRoutes
 
                 Scaffold(
@@ -117,7 +119,6 @@ class MainActivity : ComponentActivity() {
 
                                 val items = listOf(
                                     NavItem(getString(R.string.nav_simulation), "financialCalculator", Icons.Filled.Home),
-                                    NavItem(getString(R.string.nav_surplus), "surplusCalculator", Icons.Filled.Star),
                                     NavItem(getString(R.string.nav_charts), "charts", Icons.Filled.Share),
                                     NavItem(getString(R.string.nav_setup), "assumptions", Icons.Filled.Settings),
                                     NavItem(getString(R.string.nav_ai_agent), "agent", Icons.Filled.Face),
@@ -148,7 +149,8 @@ class MainActivity : ComponentActivity() {
                             composable("financialCalculator") {
                                 FinancialCalculatorScreen(
                                     navController = navController,
-                                    viewModel = financialViewModel
+                                    viewModel = financialViewModel,
+                                    onShowQuickStart = { quickStartSeen.value = false }
                                 )
                             }
                             composable("surplusCalculator") {
@@ -194,10 +196,23 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable("agent") {
+                                val comparisonContext = if (financialViewModel.compareState.isComparing) {
+                                    buildComparisonContextForAgent(
+                                        profile1Name = financialViewModel.compareState.profile1Name,
+                                        profile2Name = financialViewModel.compareState.profile2Name,
+                                        p1Inputs = financialViewModel.inputs,
+                                        p2Inputs = financialViewModel.profile2Inputs,
+                                        p2Surplus = financialViewModel.profile2SurplusData,
+                                        p1AvgUtility = financialViewModel.objectiveResults?.avgUtilita,
+                                        p2AvgUtility = financialViewModel.profile2ObjectiveResults?.avgUtilita
+                                    )
+                                } else null
                                 AgentScreen(
                                     inputs = financialViewModel.inputs,
                                     specificExpenses = financialViewModel.specificExpenses,
                                     surplusData = financialViewModel.surplusData,
+                                    gaConfig = financialViewModel.gaUI,
+                                    comparisonContext = comparisonContext,
                                     onBack = { navController.popBackStack() }
                                 )
                             }
@@ -236,6 +251,15 @@ class MainActivity : ComponentActivity() {
                                     isConsentGranted.value = false
                                 }
                             ) { Text(getString(R.string.privacy_consent_decline)) }
+                        }
+                    )
+                }
+
+                if (consentDecisionExists.value && isConsentGranted.value && !quickStartSeen.value) {
+                    QuickStartDialog(
+                        onDismiss = {
+                            QuickStartRepository.markQuickStartSeen(this)
+                            quickStartSeen.value = true
                         }
                     )
                 }

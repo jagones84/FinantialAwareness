@@ -172,6 +172,21 @@
     <string name="section_data_input">Entrada de Datos y Configuración</string>
     <string name="section_optimization_config">Configuración de Optimización</string>
     <string name="section_analysis_actions">Análisis y Acciones</string>
+
+    <!-- Goal Solver -->
+    <string name="goal_solver_button">Goal Solver (Capital Necesario)</string>
+    <string name="goal_solver_title">Goal Solver</string>
+    <string name="goal_solver_description">Calcula el capital inicial mínimo necesario para dejar de trabajar a la edad indicada manteniendo la felicidad en el umbral elegido. Usa tus ingresos, gastos y supuestos actuales.</string>
+    <string name="goal_solver_stop_age">Edad de Fin de Trabajo</string>
+    <string name="goal_solver_threshold">Umbral de Felicidad (0–1)</string>
+    <string name="goal_solver_solve">Calcular</string>
+    <string name="goal_solver_solving">Calculando…</string>
+    <string name="goal_solver_required_capital">Capital Inicial Requerido</string>
+    <string name="goal_solver_max_utility">Felicidad Máxima Alcanzable</string>
+    <string name="goal_solver_apply">Aplicar al Capital Inicial</string>
+    <string name="goal_solver_infeasible">Objetivo no alcanzable con el plan actual.</string>
+    <string name="goal_solver_invalid_age">La edad de fin de trabajo debe estar entre la edad actual y la de fallecimiento.</string>
+    <string name="goal_solver_close">Cerrar</string>
     <string name="section_utilities">Utilidades y Gestión</string>
     <string name="open_charts">Ver Gráficos de Resultados</string>
     <string name="charts_title">Gráficos</string>

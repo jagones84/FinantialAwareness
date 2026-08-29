@@ -51,7 +51,8 @@ internal data class AnalysisUiState(
     val lastParetoReferenceSnapshot: OptimizationMarkerSnapshot?,
     val simulationResultsCount: Int,
     val sensitivityResultsCount: Int,
-    val currentWeight: Double = 0.0
+    val currentWeight: Double = 0.0,
+    val goalSolverResult: GoalSolverResult? = null
 )
 
 internal fun applyOptimizationParamsForTest(
@@ -109,8 +110,62 @@ internal fun clearAnalysisStateForTest(state: AnalysisUiState): AnalysisUiState 
         lastParetoCompromiseSnapshot = null,
         lastParetoReferenceSnapshot = null,
         simulationResultsCount = 0,
-        sensitivityResultsCount = 0
+        sensitivityResultsCount = 0,
+        goalSolverResult = null
     )
+}
+
+internal fun isGoalSolverInputValid(
+    etaAttuale: Int,
+    etaMorte: Int,
+    stopWorkAge: Int,
+    threshold: Double
+): Boolean {
+    val ageValid = stopWorkAge >= etaAttuale && stopWorkAge < etaMorte
+    val thresholdValid = threshold > 0.0 && threshold < 1.0
+    return ageValid && thresholdValid
+}
+
+/**
+ * Builds the comparison context injected into the AI Agent prompts when compare mode
+ * is active. Returns null when profile 2 data is unavailable (no comparison marker
+ * is then shown to the specialized agents).
+ */
+internal fun buildComparisonContextForAgent(
+    profile1Name: String?,
+    profile2Name: String?,
+    p1Inputs: FinancialInput,
+    p2Inputs: FinancialInput?,
+    p2Surplus: SurplusInput?,
+    p1AvgUtility: Double?,
+    p2AvgUtility: Double?
+): String? {
+    if (p2Inputs == null) return null
+
+    val p1Label = profile1Name ?: "Profile 1"
+    val p2Label = profile2Name ?: "Profile 2"
+
+    return buildString {
+        appendLine("**COMPARISON MODE ACTIVE** — the user is comparing two profiles:")
+        appendLine("- Profile 1 ($p1Label): age ${p1Inputs.etaAttuale}, retirement ${p1Inputs.etaPensione}, " +
+            "death ${p1Inputs.etaMorte}, initial capital ${p1Inputs.capitaleIniziale}, " +
+            "legacy ${p1Inputs.soldiDaConservare}, P1 ${p1Inputs.p1SavingRatioSurplus}, " +
+            "P2 ${p1Inputs.p2EtaFineRisparmioNoCapitale}, P3 ${p1Inputs.p3PercentualeCapitaleDaSpendereAnnualmente}, " +
+            "P4 ${p1Inputs.p4EtaAnticipataInizioSpesaCapitale}" +
+            (p1AvgUtility?.let { ", Avg Utility ${"%.4f".format(Locale.US, it)}" } ?: ""))
+        appendLine("- Profile 2 ($p2Label): age ${p2Inputs.etaAttuale}, retirement ${p2Inputs.etaPensione}, " +
+            "death ${p2Inputs.etaMorte}, initial capital ${p2Inputs.capitaleIniziale}, " +
+            "legacy ${p2Inputs.soldiDaConservare}, P1 ${p2Inputs.p1SavingRatioSurplus}, " +
+            "P2 ${p2Inputs.p2EtaFineRisparmioNoCapitale}, P3 ${p2Inputs.p3PercentualeCapitaleDaSpendereAnnualmente}, " +
+            "P4 ${p2Inputs.p4EtaAnticipataInizioSpesaCapitale}" +
+            (p2AvgUtility?.let { ", Avg Utility ${"%.4f".format(Locale.US, it)}" } ?: ""))
+        if (p2Surplus != null) {
+            appendLine("- Profile 2 monthly net salary: ${p2Surplus.stipendioMensile}, " +
+                "monthly net pension: ${p2Surplus.pensioneMensileNetta}, " +
+                "rent/mortgage: ${p2Surplus.mutuoAffitto} until age ${p2Surplus.mutuoAffittoFinoEta}")
+        }
+        appendLine("Compare both profiles and state which one is better and why.")
+    }.trimEnd()
 }
 
 internal fun defaultOptimizationModeForTest(): OptimizationMode {
@@ -457,9 +512,15 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     var simulationResults by mutableStateOf<List<SimulationYear>>(emptyList())
     var sensitivityResults by mutableStateOf<List<SensitivityResult>?>(null)
     var sensitivityMessageResId by mutableStateOf<Int?>(null)
-    
+
     var optimizing by mutableStateOf(false)
     var optimizationResult by mutableStateOf<OptimizationResult?>(null)
+
+    // Goal Solver State
+    var goalSolverResult by mutableStateOf<GoalSolverResult?>(null)
+        private set
+    var goalSolverRunning by mutableStateOf(false)
+        private set
 
     // Compare Mode State
     var compareState by mutableStateOf(CompareState())
@@ -541,16 +602,18 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         inputs = newInputs
         uiInputs = FinancialInputUI.from(newInputs)
         clearOptimizationArtifacts()
+        goalSolverResult = null
         saveInputs()
     }
 
     fun updateUiInputs(newUiInputs: FinancialInputUI) {
         uiInputs = newUiInputs
     }
-    
+
     fun updateParsedInput(updater: (FinancialInput) -> FinancialInput) {
         inputs = updater(inputs)
         clearOptimizationArtifacts()
+        goalSolverResult = null
         saveInputs()
     }
 
@@ -579,7 +642,8 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                 lastParetoReferenceSnapshot = lastParetoReferenceSnapshot,
                 simulationResultsCount = simulationResults.size,
                 sensitivityResultsCount = sensitivityResults?.size ?: 0,
-                currentWeight = inputs.bonusStdWeight
+                currentWeight = inputs.bonusStdWeight,
+                goalSolverResult = goalSolverResult
             )
         )
 
@@ -596,6 +660,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         simulationResults = emptyList()
         sensitivityResults = null
         sensitivityMessageResId = null
+        goalSolverResult = null
 
         profile2ObjectiveResults = null
         profile2SimulationResults = emptyList()
@@ -656,6 +721,32 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                 weightUsed = inputs.bonusStdWeight
             )
         }
+    }
+
+    fun runGoalSolver(stopWorkAge: Int, threshold: Double) {
+        viewModelScope.launch {
+            goalSolverRunning = true
+            goalSolverResult = null
+            try {
+                goalSolverResult = withContext(Dispatchers.Default) {
+                    GoalSolverLogic.solveMinimumInitialCapital(
+                        baseInputs = inputs,
+                        specificExpenses = specificExpenses,
+                        surplusData = surplusData,
+                        stopWorkAge = stopWorkAge,
+                        threshold = threshold
+                    )
+                }
+            } finally {
+                goalSolverRunning = false
+            }
+        }
+    }
+
+    fun applyGoalSolverCapital() {
+        val capital = goalSolverResult?.requiredCapital ?: return
+        updateInputs(inputs.copy(capitaleIniziale = capital))
+        runSimulation()
     }
 
     fun runSimulation() {
