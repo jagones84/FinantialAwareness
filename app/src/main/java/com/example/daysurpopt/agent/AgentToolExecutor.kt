@@ -14,6 +14,7 @@ import com.example.daysurpopt.logic.OptimizationLogic
 import com.example.daysurpopt.logic.ParetoKneeSelectionLogic
 import com.example.daysurpopt.logic.ParetoOptimizationLogic
 import com.example.daysurpopt.logic.calculateSimulationWithWeight
+import com.example.daysurpopt.logic.calculateStandardDeviation
 import com.example.daysurpopt.utils.AppDebugLog
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -29,6 +30,17 @@ import java.util.Locale
  */
 object AgentToolExecutor {
 
+    private val commandRegex = Regex("(WEB_SEARCH|RUN_SIMULATION|RUN_OPTIMIZATION|RUN_SENSITIVITY|RUN_MULTI_AGENT_ANALYSIS|RUN_RETIREMENT_SOLVER|GET_TIME|FETCH_PAGE|GET_FINANCIAL_CONTEXT)")
+
+    /**
+     * Extracts the tool command name from an LLM response, or null when the response
+     * contains no tool command. Used by the chat loop to track which tools already
+     * ran in the current turn.
+     */
+    fun extractCommandName(response: String): String? {
+        return commandRegex.find(response)?.value
+    }
+
     suspend fun checkForToolUse(
         response: String,
         baseInputs: FinancialInput,
@@ -36,12 +48,19 @@ object AgentToolExecutor {
         surplusData: SurplusInput,
         userGaConfig: GAConfigUI? = null,
         comparisonContext: String? = null,
+        alreadyExecutedCommands: Set<String> = emptySet(),
         llmRequest: suspend (String) -> String // Callback for Multi-Agent workflow
     ): String? {
         // 1. Identify the command
-        val commandRegex = Regex("(WEB_SEARCH|RUN_SIMULATION|RUN_OPTIMIZATION|RUN_SENSITIVITY|RUN_MULTI_AGENT_ANALYSIS|RUN_RETIREMENT_SOLVER|GET_TIME|FETCH_PAGE|GET_FINANCIAL_CONTEXT)")
         val match = commandRegex.find(response) ?: return null
         val command = match.value
+
+        // 1.5 Re-execution guard: running the same heavy tool twice in one turn wastes
+        // several LLM calls and produces conflicting reports; the first output is authoritative.
+        if (command in alreadyExecutedCommands) {
+            return "**Tool $command was already executed in this turn.** Its full output is above in the conversation. " +
+                "Do not call it again — use that existing output to answer the user now."
+        }
         val startIndex = match.range.last + 1
 
         // 2. Extract JSON parameters with brace counting to handle nested objects (e.g., curves)
@@ -641,6 +660,65 @@ object AgentToolExecutor {
         }
     }
 
+    /**
+     * Builds the shared financial context for the multi-agent workflow. Unlike the raw
+     * inputs, this includes REAL engine results (base simulation metrics, monthly surplus,
+     * implied saving, actual debt years) plus the parameter semantics, so the specialized
+     * agents reason on data instead of hallucinating monetary figures.
+     */
+    internal suspend fun buildMultiAgentFinancialContext(
+        baseInputs: FinancialInput,
+        specificExpenses: List<SpecificExpense>,
+        surplusData: SurplusInput,
+        marketContext: String
+    ): String {
+        val (baseObjective, baseYears) = withContext(Dispatchers.Default) {
+            calculateSimulationWithWeight(baseInputs, specificExpenses, surplusData)
+        }
+        val utilities = baseYears.flatMap { year ->
+            if (year.monthlyUtilitySamples.isNotEmpty()) year.monthlyUtilitySamples else listOf(year.funzioneUtilita)
+        }
+        val avgUtility = utilities.average()
+        val stdDev = calculateStandardDeviation(utilities)
+        val stability = AgentReportFormatter.computeStabilityIndex(avgUtility, stdDev)
+        val finalCapital = baseYears.lastOrNull()?.capitaleFineAnno ?: 0.0
+
+        val monthlyIncome = surplusData.getEntrateMensiliLavorativa()
+        val monthlyExpenses = surplusData.getUsciteMensiliLavorativa(true)
+        val monthlySurplus = monthlyIncome - monthlyExpenses
+        val monthlySaving = monthlySurplus * baseInputs.p1SavingRatioSurplus
+        val monthlyConsumption = monthlySurplus - monthlySaving
+
+        val debtAges = baseYears.filter { it.debtAmount > 0.0 }.map { it.eta }
+        val debtStatus = if (debtAges.isEmpty()) {
+            "No debt occurs in this plan: the debt interest rate parameter is currently inert. " +
+                "Do not recommend debt elimination."
+        } else {
+            "Debt occurs in years: $debtAges — the debt interest rate applies there."
+        }
+
+        return """
+            **Financial Context**:
+            - Capital Interest Rate: ${baseInputs.tassoGuadagnoInteresse} (Note: This is the REAL interest rate, net of inflation).
+            - Debt Interest Rate: ${baseInputs.tassoInteresseDebito} (applies only if the simulation reports actual debt — see Debt Status).
+            - External Benchmarks: $marketContext
+
+            **P1 Semantics (IMPORTANT)**:
+            - P1 is the fraction of the monthly SURPLUS (income minus fixed expenses) that is SAVED into capital.
+            - The remaining part of the surplus is consumed (lifestyle spending generating utility).
+            - P1 is not a percentage of total income: do not compare it with income-based household savings-rate statistics.
+
+            **Base Simulation Results (computed by the engine — use these, do not estimate)**:
+            - Monthly Surplus: ${"%.2f".format(Locale.US, monthlySurplus)} (income ${"%.2f".format(Locale.US, monthlyIncome)} - fixed expenses ${"%.2f".format(Locale.US, monthlyExpenses)})
+            - Monthly Saving: ${"%.2f".format(Locale.US, monthlySaving)}; Monthly Consumption: ${"%.2f".format(Locale.US, monthlyConsumption)}
+            - Objective Function: ${"%.4f".format(Locale.US, baseObjective)}
+            - Avg Utility: ${"%.4f".format(Locale.US, avgUtility)} | Standard Deviation: ${"%.4f".format(Locale.US, stdDev)} | Stability Score: ${"%.4f".format(Locale.US, stability)}
+            - Final Capital: ${"%.2f".format(Locale.US, finalCapital)}
+
+            **Debt Status**: $debtStatus
+        """.trimIndent()
+    }
+
     private suspend fun executeMultiAgentWorkflow(
         baseInputs: FinancialInput,
         specificExpenses: List<SpecificExpense>,
@@ -659,12 +737,9 @@ object AgentToolExecutor {
                 val marketContextDeferred = async { llmRequest(marketContextPrompt) }
                 val marketContext = marketContextDeferred.await()
 
-                val commonFinancialContext = """
-                    **Financial Context**:
-                    - Capital Interest Rate: ${baseInputs.tassoGuadagnoInteresse} (Note: This is the REAL interest rate, net of inflation).
-                    - Debt Interest Rate: ${baseInputs.tassoInteresseDebito}.
-                    - External Benchmarks: $marketContext
-                """.trimIndent()
+                val commonFinancialContext = buildMultiAgentFinancialContext(
+                    baseInputs, specificExpenses, surplusData, marketContext
+                )
 
                 // Agent 1: Sustainability & Growth
                 val sustainabilityPrompt = AgentPrompts.getSustainabilityPrompt(baseInputs, commonFinancialContext, comparisonContext ?: "")

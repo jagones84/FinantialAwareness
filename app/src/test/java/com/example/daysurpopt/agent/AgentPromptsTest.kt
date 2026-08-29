@@ -49,4 +49,55 @@ class AgentPromptsTest {
             prompt.contains("AvgUtility / StdDev")
         )
     }
+
+    @Test
+    fun sustainabilityPrompt_definesP1AsSurplusShare() {
+        val prompt = AgentPrompts.getSustainabilityPrompt(
+            baseInputs = FinancialInput(),
+            commonFinancialContext = "context"
+        )
+
+        assertTrue(
+            "Sustainability prompt must define P1 as the saved fraction of the monthly SURPLUS (income minus fixed expenses)",
+            prompt.contains("SURPLUS (income minus fixed expenses)")
+        )
+        assertTrue(
+            "Sustainability prompt must forbid income-based savings-rate comparisons",
+            prompt.contains("not a percentage of total income")
+        )
+    }
+
+    @Test
+    fun riskPrompt_explainsDebtIsConditional() {
+        val prompt = AgentPrompts.getRiskPrompt(
+            baseInputs = FinancialInput(),
+            commonFinancialContext = "context"
+        )
+
+        assertTrue(
+            "Risk prompt must state the debt rate applies only if the simulation reports actual debt",
+            prompt.contains("only if the simulation reports actual debt")
+        )
+        assertTrue(
+            "Risk prompt must forbid debt-elimination advice when no debt occurs",
+            prompt.contains("do not recommend debt elimination")
+        )
+    }
+
+    @Test
+    fun masterPrompt_forbidsInventedNumbers() {
+        val prompt = AgentPrompts.getMasterPrompt(
+            marketContext = "market",
+            sustainabilityReport = "s",
+            riskReport = "r",
+            analystReport = "a",
+            isComparing = false,
+            locale = java.util.Locale.US
+        )
+
+        assertTrue(
+            "Master prompt must restrict the report to engine-provided numbers",
+            prompt.contains("Use only the numbers provided")
+        )
+    }
 }

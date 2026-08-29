@@ -238,7 +238,8 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
         surplusData: SurplusInput,
         depth: Int,
         userGaConfig: GAConfigUI? = null,
-        comparisonContext: String? = null
+        comparisonContext: String? = null,
+        executedCommands: Set<String> = emptySet()
     ) {
         if (depth > 5) { // Prevent infinite loops
              val stopMessage = ChatMessage(
@@ -277,6 +278,7 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             surplusData = surplusData,
             userGaConfig = userGaConfig,
             comparisonContext = comparisonContext,
+            alreadyExecutedCommands = executedCommands,
             llmRequest = { prompt ->
                 generateResponse(
                     messages = listOf(ChatMessage("", "user", "Execute analysis.", 0)),
@@ -301,8 +303,14 @@ class AgentViewModel(application: Application) : AndroidViewModel(application) {
             currentSession.value = sessionWithTool
             ChatRepository.updateSession(getApplication(), sessionWithTool)
             
-            // Recurse: Agent sees tool result and decides next step
-            processAgentTurn(messagesWithTool, sessionWithTool, inputs, specificExpenses, surplusData, depth + 1, userGaConfig, comparisonContext)
+            // Recurse: Agent sees tool result and decides next step, remembering which
+            // tools already ran in this turn so the same heavy tool is never executed twice.
+            val commandName = AgentToolExecutor.extractCommandName(responseContent)
+            processAgentTurn(
+                messagesWithTool, sessionWithTool, inputs, specificExpenses, surplusData, depth + 1,
+                userGaConfig, comparisonContext,
+                executedCommands = if (commandName != null) executedCommands + commandName else executedCommands
+            )
         } else {
             // No tool used, turn ends
         }

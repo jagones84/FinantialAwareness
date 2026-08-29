@@ -26,6 +26,13 @@ object AgentPrompts {
             - P3 (Spend Rate): ${baseInputs.p3PercentualeCapitaleDaSpendereAnnualmente}
             $commonFinancialContext
             $comparisonContext
+
+            **Parameter Semantics (read before analyzing)**:
+            - P1 is the fraction of the monthly SURPLUS (income minus fixed expenses) that is SAVED into capital;
+              the rest of the surplus is consumed. P1 is not a percentage of total income: never benchmark it
+              against income-based household savings-rate statistics (e.g., 'EU households save 5-12% of income').
+            - The Base Simulation Results in the context below are computed by the app engine: quote them
+              instead of estimating your own monetary figures (especially for legacy funding math).
             
             **Analyze these specific points:**
             1. **Savings Rate Analysis**: Is P1 sufficient given the Real Interest Rate? Does it suggest a 'scarcity' or 'abundance' mindset?
@@ -55,7 +62,7 @@ object AgentPrompts {
             $comparisonContext
             
             **Analyze these specific points:**
-            1. **Debt Efficiency**: Is debt management optimal given the rates?
+            1. **Debt Efficiency**: The debt interest rate applies only if the simulation reports actual debt (see the Debt Status in the context). If no debt occurs, do not recommend debt elimination — analyze instead what would happen if capital ran out.
             2. **Risk Profile**: Is the plan resilient to a '2008-style' crash or high inflation?
             3. **Stability Index**: Evaluate the plan's smoothness. Is it a "Rollercoaster" or a "Smooth Ride"?
             4. **Inheritance Impact**: How dependent is this plan on the inheritance event?
@@ -85,6 +92,8 @@ object AgentPrompts {
             
             **Task:**
             Produce a detailed, professional, and **astonishing** financial report.
+            Use only the numbers provided in the agent reports (engine-computed): never invent or re-derive
+            monetary figures yourself, and flag any contradiction between agents instead of averaging them.
             
             **Style Guide:**
             - **Tone**: Professional but engaging. Use ONE powerful analogy (e.g., "This plan is like a marathon...").

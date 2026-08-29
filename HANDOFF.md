@@ -34,11 +34,19 @@ All fixes were applied **red-first** (failing test → implementation → green 
 - **Agent sensitivity access DONE** — new tool `RUN_SENSITIVITY` wraps the GUI's
   `OptimizationLogic.runSensitivityAnalysis` with the same override semantics, readable ranked
   output (`AgentSensitivityToolTest`), documented in the prompt.
+- **Multi-agent grounding DONE (2026-08-05, part 4)** — the Sustainability/Risk agents previously
+  received only raw inputs and hallucinated monetary figures (contradictory legacy math, "eliminate
+  debt" on a debt-free plan, P1 benchmarked against income-based stats). `AgentToolExecutor.buildMultiAgentFinancialContext`
+  now injects REAL engine results (objective, avg utility, std dev, stability, final capital, monthly
+  surplus/saving breakdown, actual debt years) plus P1 surplus semantics into the shared context;
+  Master prompt forbids invented numbers. Double execution of `RUN_MULTI_AGENT_ANALYSIS` in one turn
+  blocked by `alreadyExecutedCommands` guard in `checkForToolUse` + `extractCommandName` tracking in
+  `AgentViewModel` + "at most once per user request" prompt instruction (`AgentMultiAgentContextTest`).
 - **Still open (by design, low priority):** F2 (in-context age validation in the Surplus form — the
   Goal Solver dialog validates its own ages), F3 partial (threshold/ceiling now surfaced via the
   Goal Solver dialog, not in the main results card), optional "apply optimization results" agent
   write-back tool, PDF/charts/profile-management agent tools.
-- Verification: `testDebugUnitTest` 92 tests / 0 failures / 0 errors; `assembleDebug` green.
+- Verification: `testDebugUnitTest` 102 tests / 0 failures / 0 errors; `assembleDebug` green.
 
 ---
 

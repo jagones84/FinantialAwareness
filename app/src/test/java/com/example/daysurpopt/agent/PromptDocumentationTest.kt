@@ -87,6 +87,14 @@ class PromptDocumentationTest {
     }
 
     @Test
+    fun system_prompt_limits_multi_agent_analysis_to_one_run_per_request() {
+        assertTrue(
+            "System prompt must instruct the LLM to call RUN_MULTI_AGENT_ANALYSIS at most once per user request",
+            prompt.contains("at most once per user request")
+        )
+    }
+
+    @Test
     fun system_prompt_documents_optimization_modes_and_ga_overrides() {
         assertTrue(
             "RUN_OPTIMIZATION docs must expose the GUI optimization modes",
