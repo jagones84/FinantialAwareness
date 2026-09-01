@@ -188,6 +188,15 @@ internal fun optimizationModeDisplayNameForTest(mode: OptimizationMode): String 
     }
 }
 
+/**
+ * Scheduled-expenses inputs are live: returns true when the new list actually differs
+ * from the current one, so a real change invalidates stale analysis and re-simulates,
+ * while a no-op edit (re-typed value, non-numeric text) leaves the analysis untouched.
+ */
+internal fun expensesListsDiffer(current: List<SpecificExpense>, new: List<SpecificExpense>): Boolean {
+    return current != new
+}
+
 class FinancialViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application.applicationContext
     
@@ -816,8 +825,10 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun updateSpecificExpenses(newExpenses: List<SpecificExpense>) {
+        if (!expensesListsDiffer(specificExpenses, newExpenses)) return
         specificExpenses = newExpenses
         clearOptimizationArtifacts()
+        goalSolverResult = null
         SpecificExpensesRepository.saveExpenses(context, specificExpenses)
         triggerRecalculation()
     }

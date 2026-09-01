@@ -3,6 +3,9 @@
     <string name="financial_calculator_title">Personal Financial Calculator</string>
     <string name="reset_inputs">Reset Inputs</string>
     <string name="clear_analysis_state">Erase Analysis Results</string>
+    <string name="erase">Erase</string>
+    <string name="erase_analysis_confirm_title">Erase Analysis Results?</string>
+    <string name="erase_analysis_confirm_message">This clears simulation results, optimization outcomes, sensitivity analysis, goal solver results and all chart markers. Saved inputs, profiles and preferences are not affected.</string>
     <string name="manage_profiles">Manage Profiles</string>
     <string name="surplus_calculation">Calculate Surplus</string>
     <string name="calculated_daily_surplus">Calculated Daily Surplus:</string>
@@ -13,7 +16,7 @@
     <string name="work_surplus_average">Work (avg with/without mortgage): %1$s</string>
     <string name="pension_surplus_average">Pension (avg with/without mortgage): %1$s</string>
     <string name="mortgage_paid_until_age">Mortgage/rent paid until age %1$d</string>
-    <string name="add_edit_one_time_expenses">Add/Edit One-Time Expenses</string>
+    <string name="add_edit_scheduled_expenses">Add/Edit Scheduled Expenses</string>
     <string name="model_assumptions">Model Assumptions</string>
     <string name="expected_inheritance">Expected inheritance (€)</string>
     <string name="capital_to_leave">Capital to leave as inheritance or keep for old age (€)</string>
@@ -106,8 +109,8 @@
     <string name="confirm_overwrite_message">A profile named "%1$s" already exists. Overwrite it?</string>
     <string name="overwrite">Overwrite</string>
     <string name="cancel">Cancel</string>
-    <string name="one_time_expenses_title">One-Time Expenses</string>
-    <string name="one_time_expenses_description">Enter one-time expenses expected at specific ages (e.g., car purchase, wedding, major medical expenses, etc.).\nImportant: Expenses entered here must not be included (even as monthly savings) in the fixed monthly expenses in the surplus calculation screen to avoid double counting. Alternatively, you can ignore this section and \'spread\' these expenses in the \'Other\' field of the previous screen.</string>
+    <string name="scheduled_expenses_title">Scheduled Expenses</string>
+    <string name="scheduled_expenses_description">Enter scheduled expenses expected at specific ages (e.g., car purchase, wedding, major medical expenses, etc.).\nImportant: Expenses entered here must not be included (even as monthly savings) in the fixed monthly expenses in the surplus calculation screen to avoid double counting. Alternatively, you can ignore this section and \'spread\' these expenses in the \'Other\' field of the previous screen.</string>
     <string name="age_label_format">Age %1$d</string>
     <string name="expense_amount_format">Expense %1$d (€)</string>
     <string name="utility_offset_label">Utility Offset %1$d</string>

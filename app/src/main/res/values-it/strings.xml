@@ -3,6 +3,9 @@
     <string name="financial_calculator_title">Calcolatore Finanziario Personale</string>
     <string name="reset_inputs">Reset Valori</string>
     <string name="clear_analysis_state">Cancella Risultati Analisi</string>
+    <string name="erase">Cancella</string>
+    <string name="erase_analysis_confirm_title">Cancellare i Risultati delle Analisi?</string>
+    <string name="erase_analysis_confirm_message">Verranno cancellati i risultati delle simulazioni, delle ottimizzazioni, delle analisi di sensitività, i risultati del Goal Solver e tutti i marker dei grafici. I dati salvati (input, profili e preferenze) non vengono modificati.</string>
     <string name="manage_profiles">Gestisci Profili</string>
     <string name="surplus_calculation">Calcola Surplus</string>
     <string name="calculated_daily_surplus">Surplus Giornaliero Calcolato:</string>
@@ -13,7 +16,7 @@
     <string name="work_surplus_average">Lavoro (media con/senza mutuo): %1$s</string>
     <string name="pension_surplus_average">Pensione (media con/senza mutuo): %1$s</string>
     <string name="mortgage_paid_until_age">Mutuo/affitto pagato fino a %1$d anni</string>
-    <string name="add_edit_one_time_expenses">Aggiungi/Modifica Spese Una Tantum</string>
+    <string name="add_edit_scheduled_expenses">Aggiungi/Modifica Spese Pianificate</string>
     <string name="model_assumptions">Assunzioni del Modello</string>
     <string name="expected_inheritance">Eredità prevista (€)</string>
     <string name="capital_to_leave">Capitale da lasciare in eredità o conservare per la vecchiaia (€)</string>
@@ -96,8 +99,8 @@
     <string name="confirm_overwrite_message">Un profilo chiamato "%1$s" esiste già. Vuoi sovrascriverlo?</string>
     <string name="overwrite">Sovrascrivi</string>
     <string name="cancel">Annulla</string>
-    <string name="one_time_expenses_title">Spese Una Tantum</string>
-    <string name="one_time_expenses_description">Inserisci qui le spese una tantum previste a età specifiche (es. acquisto auto, matrimonio, spese mediche importanti, etc.). \nImportante: Le spese inserite qui non devono essere incluse (nemmeno come risparmio mensile) nelle spese fisse mensili nella schermata del calcolo del surplus, per evitare di contarle due volte. In alternativa, puoi ignorare questa sezione e \'spalmare\' queste spese nel campo \'Altro\' della schermata precedente.</string>
+    <string name="scheduled_expenses_title">Spese Pianificate</string>
+    <string name="scheduled_expenses_description">Inserisci qui le spese pianificate previste a età specifiche (es. acquisto auto, matrimonio, spese mediche importanti, etc.). \nImportante: Le spese inserite qui non devono essere incluse (nemmeno come risparmio mensile) nelle spese fisse mensili nella schermata del calcolo del surplus, per evitare di contarle due volte. In alternativa, puoi ignorare questa sezione e \'spalmare\' queste spese nel campo \'Altro\' della schermata precedente.</string>
     <string name="age_label_format">Età %1$d</string>
     <string name="expense_amount_format">Spesa %1$d (€)</string>
     <string name="utility_offset_label">Utility Offset %1$d</string>

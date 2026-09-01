@@ -10,14 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.daysurpopt.R
-import com.example.daysurpopt.data.SpecificExpensesRepository
 import com.example.daysurpopt.domain.SpecificExpense
 import com.example.daysurpopt.domain.SpecificExpenseUI
 import com.example.daysurpopt.ui.common.DeltaInputField
@@ -29,18 +27,13 @@ fun SpecificExpensesScreen(
     navController: NavController,
     viewModel: FinancialViewModel
 ) {
-    val context = LocalContext.current
-    var expenses by remember { mutableStateOf(SpecificExpensesRepository.loadExpenses(context)) }
+    var expenses by remember { mutableStateOf(viewModel.specificExpenses) }
     var uiExpenses by remember {
         mutableStateOf(expenses.map { SpecificExpenseUI(it.age.toString(), String.format(Locale.US, "%.2f", it.amount), String.format(Locale.US, "%.4f", it.utilityOffset)) })
     }
 
     val isComparing = viewModel.compareState.isComparing
     val p2Expenses = if (isComparing) viewModel.profile2Expenses else emptyList()
-
-    LaunchedEffect(expenses) {
-        SpecificExpensesRepository.saveExpenses(context, expenses)
-    }
 
     SpecificExpensesContent(
         expenses = expenses,
@@ -50,6 +43,7 @@ fun SpecificExpensesScreen(
         onUpdateExpenses = { newExpenses, newUiExpenses ->
             expenses = newExpenses
             uiExpenses = newUiExpenses
+            viewModel.updateSpecificExpenses(newExpenses)
         },
         onBack = { navController.popBackStack() }
     )
@@ -69,7 +63,7 @@ fun SpecificExpensesContent(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.one_time_expenses_title)) },
+                title = { Text(stringResource(R.string.scheduled_expenses_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.save_and_return))
@@ -93,7 +87,7 @@ fun SpecificExpensesContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                stringResource(R.string.one_time_expenses_description),
+                stringResource(R.string.scheduled_expenses_description),
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(16.dp))

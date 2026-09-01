@@ -144,6 +144,7 @@ fun FinancialCalculatorContent(
     val scrollState = rememberScrollState()
     var showLanguageMenu by remember { mutableStateOf(false) }
     var showGoalSolverDialog by remember { mutableStateOf(false) }
+    var showEraseConfirmDialog by remember { mutableStateOf(false) }
     val displayedMode = optimizationResult?.mode ?: optimizationMode
 
     Scaffold(
@@ -255,7 +256,7 @@ fun FinancialCalculatorContent(
                 )
                 MenuButton(
                     onClick = { onNavigate("specificExpenses") },
-                    text = stringResource(R.string.add_edit_one_time_expenses)
+                    text = stringResource(R.string.add_edit_scheduled_expenses)
                 )
             }
 
@@ -345,7 +346,7 @@ fun FinancialCalculatorContent(
                 }
 
                 OutlinedButton(
-                    onClick = onClearAnalysisState,
+                    onClick = { showEraseConfirmDialog = true },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !optimizing
                 ) {
@@ -758,6 +759,38 @@ fun FinancialCalculatorContent(
                 showGoalSolverDialog = false
             },
             onDismiss = { showGoalSolverDialog = false }
+        )
+    }
+
+    if (showEraseConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showEraseConfirmDialog = false },
+            title = { Text(stringResource(R.string.erase_analysis_confirm_title)) },
+            text = {
+                Text(
+                    text = stringResource(R.string.erase_analysis_confirm_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearAnalysisState()
+                        showEraseConfirmDialog = false
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.erase),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEraseConfirmDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
         )
     }
 }
