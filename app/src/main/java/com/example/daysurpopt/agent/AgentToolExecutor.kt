@@ -465,13 +465,13 @@ object AgentToolExecutor {
                 is Number -> value.toInt()
                 is String -> value.toIntOrNull()
                 else -> null
-            } ?: return "Goal Solver failed: missing integer parameter 'stopWorkAge'."
+            } ?: return "Retirement study failed: missing integer parameter 'stopWorkAge'."
 
             val threshold = when (val value = params["happinessThreshold"]) {
                 is Number -> value.toDouble()
                 is String -> value.replace(',', '.').toDoubleOrNull()
                 else -> null
-            } ?: return "Goal Solver failed: missing number parameter 'happinessThreshold'."
+            } ?: return "Retirement study failed: missing number parameter 'happinessThreshold'."
 
             // Same override semantics as RUN_SIMULATION: the LLM can adjust any input
             // (e.g. zero the pension income for a pure capital-based plan) before solving.
@@ -493,15 +493,15 @@ object AgentToolExecutor {
             val capital = result.requiredCapital?.let { "%.2f".format(Locale.US, it) } ?: "N/A"
             val reason = result.reason?.let { "\n- Reason: $it" } ?: ""
 
-            "\n\n**Goal Solver Result:**\n" +
+            "\n\n**Anticipated Retirement Study Result:**\n" +
                     "- Required Initial Capital: $capital\n" +
                     "- Stop Work Age: $stopWorkAge\n" +
                     "- Happiness Threshold: ${"%.4f".format(Locale.US, threshold)}\n" +
                     "- Max Achievable Utility: ${"%.4f".format(Locale.US, result.maxAchievableUtility)}\n" +
                     "- Status: $status" + reason
         } catch (e: Exception) {
-            AppDebugLog.add("Agent", "Goal Solver error: ${e.message}")
-            "Goal Solver failed: ${e.message}"
+            AppDebugLog.add("Agent", "Retirement study error: ${e.message}")
+            "Retirement study failed: ${e.message}"
         }
     }
 

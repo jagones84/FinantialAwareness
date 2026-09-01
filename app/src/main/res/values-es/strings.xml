@@ -5,7 +5,7 @@
     <string name="clear_analysis_state">Borrar Resultados del Analisis</string>
     <string name="erase">Borrar</string>
     <string name="erase_analysis_confirm_title">¿Borrar los Resultados de los Análisis?</string>
-    <string name="erase_analysis_confirm_message">Se borrarán los resultados de las simulaciones, las optimizaciones, los análisis de sensibilidad, los resultados del Goal Solver y todos los marcadores de los gráficos. Los datos guardados (entradas, perfiles y preferencias) no se ven afectados.</string>
+    <string name="erase_analysis_confirm_message">Se borrarán los resultados de las simulaciones, las optimizaciones, los análisis de sensibilidad, los resultados del Estudio de Jubilación Anticipada y todos los marcadores de los gráficos. Los datos guardados (entradas, perfiles y preferencias) no se ven afectados.</string>
     <string name="manage_profiles">Administrar Perfiles</string>
     <string name="surplus_calculation">Calcular Superávit</string>
     <string name="calculated_daily_surplus">Superávit Diario Calculado:</string>
@@ -184,17 +184,17 @@
     <string name="section_analysis_actions">Análisis y Acciones</string>
 
     <!-- Goal Solver -->
-    <string name="goal_solver_button">Goal Solver (Capital Necesario)</string>
-    <string name="goal_solver_title">Goal Solver</string>
+    <string name="goal_solver_button">Estudio de Jubilación Anticipada</string>
+    <string name="goal_solver_title">Estudio de Jubilación Anticipada</string>
     <string name="goal_solver_description">Responde a: “¿cuánto capital necesito HOY para dejar de trabajar a la edad indicada sin bajar nunca del umbral de felicidad?”. La respuesta depende de cuánto ahorres de tu superávit mientras trabajas (P1), así que es una TABLA, no un número único: cada fila es una tasa de ahorro P1 con su capital mínimo. En el plan objetivo ahorras P1 del superávit hasta la edad de parada (P2 = P4 = edad de parada) y desde entonces el plan retira del capital exactamente el importe anual que mantiene la utilidad en el umbral (P3 = 0 significa: sin retiro porcentual extra — el motor gasta del capital el mínimo de utilidad). El capital a dejar al fallecer se sigue respetando. Selecciona una fila y Aplicar instala ese plan completo.</string>
     <string name="goal_solver_stop_age">Edad de Fin de Trabajo</string>
     <string name="goal_solver_threshold">Umbral de Felicidad (0–1)</string>
-    <string name="goal_solver_solve">Calcular</string>
-    <string name="goal_solver_solving">Calculando…</string>
+    <string name="goal_solver_solve">Ejecutar estudio</string>
+    <string name="goal_solver_solving">Estudio en curso…</string>
     <string name="goal_solver_required_capital">Capital Inicial Requerido</string>
     <string name="goal_solver_max_utility">Felicidad Máxima Alcanzable</string>
     <string name="goal_solver_apply">Aplicar Plan Objetivo</string>
-    <string name="goal_solver_chart_title">Capital necesario vs ahorro (locus del solver)</string>
+    <string name="goal_solver_chart_title">Capital necesario vs ahorro (locus del estudio)</string>
     <string name="goal_solver_chart_axis_p1">Ahorro P1 (%)</string>
     <string name="goal_solver_chart_axis_capital">Capital C_I (EUR)</string>
     <string name="goal_solver_trace_locus">Capital mínimo</string>
