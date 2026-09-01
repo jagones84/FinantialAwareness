@@ -5,7 +5,7 @@
     <string name="clear_analysis_state">Cancella Risultati Analisi</string>
     <string name="erase">Cancella</string>
     <string name="erase_analysis_confirm_title">Cancellare i Risultati delle Analisi?</string>
-    <string name="erase_analysis_confirm_message">Verranno cancellati i risultati delle simulazioni, delle ottimizzazioni, delle analisi di sensitività, i risultati del Goal Solver e tutti i marker dei grafici. I dati salvati (input, profili e preferenze) non vengono modificati.</string>
+    <string name="erase_analysis_confirm_message">Verranno cancellati i risultati delle simulazioni, delle ottimizzazioni, delle analisi di sensitività, i risultati dello Studio di Pensionamento Anticipato e tutti i marker dei grafici. I dati salvati (input, profili e preferenze) non vengono modificati.</string>
     <string name="manage_profiles">Gestisci Profili</string>
     <string name="surplus_calculation">Calcola Surplus</string>
     <string name="calculated_daily_surplus">Surplus Giornaliero Calcolato:</string>
@@ -234,16 +234,21 @@
     <string name="section_analysis_actions">3. Analisi &amp; Azioni</string>
 
     <!-- Goal Solver -->
-    <string name="goal_solver_button">Goal Solver (Capitale Necessario)</string>
-    <string name="goal_solver_title">Goal Solver</string>
+    <string name="goal_solver_button">Studio di Pensionamento Anticipato</string>
+    <string name="goal_solver_title">Studio di Pensionamento Anticipato</string>
     <string name="goal_solver_description">Risponde a: “quanto capitale mi serve OGGI per smettere di lavorare all\'età indicata senza mai scendere sotto la soglia di felicità?”. La risposta dipende da quanto surplus risparmi mentre lavori (P1), quindi è una TABELLA, non un numero singolo: ogni riga è un rapporto di risparmio P1 con il suo capitale minimo. Nel piano obiettivo risparmi P1 del surplus fino all\'età di stop (P2 = P4 = età di stop) e da lì in poi il piano preleva dal capitale esattamente l\'importo annuo che mantiene l\'utilità alla soglia (P3 = 0 significa: nessun prelievo percentuale extra — il motore spende dal capitale il minimo di utilità). Il capitale da lasciare alla morte è comunque rispettato. Seleziona una riga e Applica installa quel piano completo.</string>
     <string name="goal_solver_stop_age">Età di Fine Lavoro</string>
     <string name="goal_solver_threshold">Soglia di Felicità (0–1)</string>
-    <string name="goal_solver_solve">Calcola</string>
-    <string name="goal_solver_solving">Calcolo…</string>
+    <string name="goal_solver_solve">Esegui studio</string>
+    <string name="goal_solver_solving">Studio in corso…</string>
     <string name="goal_solver_required_capital">Capitale Iniziale Richiesto</string>
     <string name="goal_solver_max_utility">Felicità Massima Raggiungibile</string>
     <string name="goal_solver_apply">Applica Piano Obiettivo</string>
+    <string name="goal_solver_chart_title">Capitale necessario vs risparmio (locus dello studio)</string>
+    <string name="goal_solver_chart_axis_p1">Risparmio P1 (%)</string>
+    <string name="goal_solver_chart_axis_capital">Capitale C_I (EUR)</string>
+    <string name="goal_solver_trace_locus">Capitale minimo</string>
+    <string name="goal_solver_trace_current">Simulazione attuale</string>
     <string name="goal_solver_table_p1">Risparmio P1</string>
     <string name="goal_solver_table_capital">Capitale necessario oggi</string>
     <string name="goal_solver_current_row">(attuale)</string>

@@ -1,29 +1,30 @@
+# Gradle
+.gradle/
+build/
+
+# Android Studio / IntelliJ
 *.iml
-.gradle
-/local.properties
-local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
 .idea/
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-app/build/
-*.log
-build_errors.txt
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin
+.kotlin/
+
+# Local configuration & secrets (never commit)
+local.properties
 keystore.properties
 *.jks
 *.keystore
-.kotlin/
-.agent/
+*.hprof
+
+# OS / editor noise
+.DS_Store
+*.log
+build_errors.txt
 .trae/
 
-# Local analysis and handoff artifacts
+# Local analysis artifacts (not part of the repository)
 /NEXT_AGENT_HANDOFF.md
 /*_REPORT.md

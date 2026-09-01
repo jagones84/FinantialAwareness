@@ -389,16 +389,28 @@ object PlotlyHtmlProvider {
                          if (meta.displayModeBar === false) config.displayModeBar = false;
                          if (meta.doubleClick === false) config.doubleClick = false;
                          if (meta.staticPlot === true) config.staticPlot = true;
-                         
+
+                         // Pin the plot to the CURRENT div size: the viewport height can be
+                         // wrong while the WebView is still settling (e.g. inside a dialog),
+                         // which clipped the bottom (x axis labels/title) with no re-render.
+                         if (s.w > 0 && s.h > 0) {
+                             if (!spec.layout) spec.layout = {};
+                             spec.layout.width = s.w;
+                             spec.layout.height = s.h;
+                         }
+
                          var promise;
-                         if (isInitial) {
+                         if (isInitial || config.staticPlot === true) {
                              promise = Plotly.newPlot('plot', spec.data, spec.layout, config);
                          } else {
                              promise = Plotly.react('plot', spec.data, spec.layout, config);
                          }
-                         
+
                          promise.then(function() {
                             statusText('[JS] OK ' + s.w + 'x' + s.h, 'green');
+                            window.__renderDone = true;
+                            window.__lastPlotW = s.w;
+                            window.__lastPlotH = s.h;
                             setupDraggablePoints(spec);
                             setupPointSelection(spec);
                             setTimeout(function(){
@@ -413,6 +425,23 @@ object PlotlyHtmlProvider {
                        } catch (e) {
                           statusText('Render Exception: ' + e, 'red');
                        }
+                    }
+
+                    // Re-render when the container settles or changes size (dialog layout,
+                    // rotation): the first render can happen before the WebView is laid out.
+                    if (window.ResizeObserver) {
+                        var __plotRo = new ResizeObserver(function() {
+                            var el = document.getElementById('plot');
+                            if (!el || !window.__pendingSpec || !window.Plotly || !window.__renderDone) return;
+                            var s = plotSize();
+                            if (s.w < 10 || s.h < 10) return;
+                            if (Math.abs(s.w - (window.__lastPlotW || 0)) > 2 || Math.abs(s.h - (window.__lastPlotH || 0)) > 2) {
+                                window.__lastPlotW = s.w;
+                                window.__lastPlotH = s.h;
+                                tryRender(false);
+                            }
+                        });
+                        __plotRo.observe(document.getElementById('plot'));
                     }
                   })();
                 </script>
