@@ -5,6 +5,8 @@ import com.example.daysurpopt.domain.SimulationYear
 import com.example.daysurpopt.domain.SpecificExpense
 import com.example.daysurpopt.domain.SurplusInput
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.round
 
 /**
  * Goal Solver: answers the inverse question
@@ -43,11 +45,13 @@ object GoalSolverLogic {
         baseInputs: FinancialInput,
         threshold: Double,
         stopWorkAge: Int,
-        initialCapital: Double
+        initialCapital: Double,
+        p1SavingRatio: Double? = null
     ): FinancialInput {
         return baseInputs
             .withDefaultAssumptionCurves()
             .copy(
+                p1SavingRatioSurplus = p1SavingRatio ?: baseInputs.p1SavingRatioSurplus,
                 etaPensione = stopWorkAge,
                 p2EtaFineRisparmioNoCapitale = stopWorkAge,
                 p4EtaAnticipataInizioSpesaCapitale = stopWorkAge,
@@ -71,6 +75,68 @@ object GoalSolverLogic {
         val capital = result.requiredCapital
             ?: throw IllegalArgumentException("Cannot apply an infeasible goal result: ${result.reason}")
         return buildGoalWhatIfInputs(baseInputs, result.threshold, result.stopWorkAge, capital)
+    }
+
+    /**
+     * Applies one row of the P1 sweep: installs that row's saving ratio together
+     * with its required capital and the whole goal plan shape.
+     */
+    fun buildGoalApplyInputs(
+        baseInputs: FinancialInput,
+        threshold: Double,
+        stopWorkAge: Int,
+        row: GoalSweepRow
+    ): FinancialInput {
+        val capital = row.requiredCapital
+            ?: throw IllegalArgumentException("Cannot apply an infeasible sweep row (P1 = ${row.p1}).")
+        return buildGoalWhatIfInputs(baseInputs, threshold, stopWorkAge, capital, row.p1)
+    }
+
+    /**
+     * The goal answer is a LOCUS, not a number: for every saving ratio P1 used
+     * while still working there is a different minimum initial capital that lets
+     * the user quit at [stopWorkAge] and never drop below [threshold] (and still
+     * respect the bequest target soldiDaConservare). Higher P1 -> more saving
+     * before quitting -> less capital needed today, so the locus is
+     * non-increasing. The user's current P1 always gets an exact row
+     * ([GoalSweepRow.isCurrentPlan]), even when it falls between grid points.
+     */
+    fun solveCapitalVsSavingRatio(
+        baseInputs: FinancialInput,
+        specificExpenses: List<SpecificExpense>,
+        surplusData: SurplusInput,
+        stopWorkAge: Int,
+        threshold: Double,
+        capitalTolerance: Double = DEFAULT_CAPITAL_TOLERANCE,
+        capitalUpperBound: Double = DEFAULT_CAPITAL_UPPER_BOUND,
+        p1Step: Double = 0.1
+    ): GoalSweepResult {
+        val validation = validateThreshold(baseInputs, threshold)
+        val currentP1 = baseInputs.p1SavingRatioSurplus.coerceIn(0.0, 1.0)
+        val steps = round(1.0 / p1Step).toInt().coerceIn(1, 100)
+        val gridStep = 1.0 / steps
+        val grid = (0..steps).map { it.toDouble() / steps }
+        val nearCurrent: (Double) -> Boolean = { abs(it - currentP1) < gridStep / 4.0 }
+        val p1Values = if (grid.any(nearCurrent)) grid else grid + currentP1
+
+        val rows = p1Values.sorted().map { p1 ->
+            if (!validation.isAchievable) {
+                GoalSweepRow(p1, null, false, nearCurrent(p1))
+            } else {
+                val result = solveMinimumInitialCapital(
+                    baseInputs = baseInputs.copy(p1SavingRatioSurplus = p1),
+                    specificExpenses = specificExpenses,
+                    surplusData = surplusData,
+                    stopWorkAge = stopWorkAge,
+                    threshold = threshold,
+                    capitalTolerance = capitalTolerance,
+                    capitalUpperBound = capitalUpperBound
+                )
+                GoalSweepRow(p1, result.requiredCapital, result.isFeasible, nearCurrent(p1))
+            }
+        }
+
+        return GoalSweepResult(threshold, stopWorkAge, validation.maxAchievableUtility, rows)
     }
 
     /**
@@ -211,4 +277,24 @@ data class GoalSolverResult(
     val threshold: Double,
     val stopWorkAge: Int,
     val maxAchievableUtility: Double
+)
+
+/**
+ * One point of the (P1, capital_i) locus: [requiredCapital] is the minimum
+ * initial capital today that allows quitting at the stop-work age with saving
+ * ratio [p1] while never dropping below the happiness threshold. Null when
+ * even the upper-bound capital cannot sustain that row.
+ */
+data class GoalSweepRow(
+    val p1: Double,
+    val requiredCapital: Double?,
+    val isFeasible: Boolean,
+    val isCurrentPlan: Boolean
+)
+
+data class GoalSweepResult(
+    val threshold: Double,
+    val stopWorkAge: Int,
+    val maxAchievableUtility: Double,
+    val rows: List<GoalSweepRow>
 )

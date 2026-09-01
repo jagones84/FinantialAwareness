@@ -52,7 +52,7 @@ internal data class AnalysisUiState(
     val simulationResultsCount: Int,
     val sensitivityResultsCount: Int,
     val currentWeight: Double = 0.0,
-    val goalSolverResult: GoalSolverResult? = null
+    val goalSweepResult: GoalSweepResult? = null
 )
 
 internal fun applyOptimizationParamsForTest(
@@ -111,7 +111,7 @@ internal fun clearAnalysisStateForTest(state: AnalysisUiState): AnalysisUiState 
         lastParetoReferenceSnapshot = null,
         simulationResultsCount = 0,
         sensitivityResultsCount = 0,
-        goalSolverResult = null
+        goalSweepResult = null
     )
 }
 
@@ -526,7 +526,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     var optimizationResult by mutableStateOf<OptimizationResult?>(null)
 
     // Goal Solver State
-    var goalSolverResult by mutableStateOf<GoalSolverResult?>(null)
+    var goalSweepResult by mutableStateOf<GoalSweepResult?>(null)
         private set
     var goalSolverRunning by mutableStateOf(false)
         private set
@@ -611,7 +611,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         inputs = newInputs
         uiInputs = FinancialInputUI.from(newInputs)
         clearOptimizationArtifacts()
-        goalSolverResult = null
+        goalSweepResult = null
         saveInputs()
     }
 
@@ -622,7 +622,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     fun updateParsedInput(updater: (FinancialInput) -> FinancialInput) {
         inputs = updater(inputs)
         clearOptimizationArtifacts()
-        goalSolverResult = null
+        goalSweepResult = null
         saveInputs()
     }
 
@@ -652,7 +652,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
                 simulationResultsCount = simulationResults.size,
                 sensitivityResultsCount = sensitivityResults?.size ?: 0,
                 currentWeight = inputs.bonusStdWeight,
-                goalSolverResult = goalSolverResult
+                goalSweepResult = goalSweepResult
             )
         )
 
@@ -669,7 +669,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         simulationResults = emptyList()
         sensitivityResults = null
         sensitivityMessageResId = null
-        goalSolverResult = null
+        goalSweepResult = null
 
         profile2ObjectiveResults = null
         profile2SimulationResults = emptyList()
@@ -735,10 +735,10 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     fun runGoalSolver(stopWorkAge: Int, threshold: Double) {
         viewModelScope.launch {
             goalSolverRunning = true
-            goalSolverResult = null
+            goalSweepResult = null
             try {
-                goalSolverResult = withContext(Dispatchers.Default) {
-                    GoalSolverLogic.solveMinimumInitialCapital(
+                goalSweepResult = withContext(Dispatchers.Default) {
+                    GoalSolverLogic.solveCapitalVsSavingRatio(
                         baseInputs = inputs,
                         specificExpenses = specificExpenses,
                         surplusData = surplusData,
@@ -752,10 +752,10 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun applyGoalSolverCapital() {
-        val result = goalSolverResult ?: return
-        if (result.requiredCapital == null) return
-        updateInputs(GoalSolverLogic.buildGoalApplyInputs(inputs, result))
+    fun applyGoalSolverPlan(row: GoalSweepRow) {
+        val sweep = goalSweepResult ?: return
+        if (row.requiredCapital == null) return
+        updateInputs(GoalSolverLogic.buildGoalApplyInputs(inputs, sweep.threshold, sweep.stopWorkAge, row))
         runSimulation()
     }
 
@@ -829,7 +829,7 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
         if (!expensesListsDiffer(specificExpenses, newExpenses)) return
         specificExpenses = newExpenses
         clearOptimizationArtifacts()
-        goalSolverResult = null
+        goalSweepResult = null
         SpecificExpensesRepository.saveExpenses(context, specificExpenses)
         triggerRecalculation()
     }

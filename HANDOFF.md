@@ -2,7 +2,12 @@
 
 Complete audit + handoff for the next agent. The audit pass added tests only
 (`AgentToolParityTest`, `PromptDocumentationTest`, `RetirementCapitalSolverTest`); the follow-up
-TDD pass applied the fixes — see section 0. Full unit suite (92 tests) and `assembleDebug` are green.
+TDD pass applied the fixes — see section 0. Full unit suite (122 tests) and `assembleDebug` are green.
+
+**Domain manuals (read BEFORE working on these domains — frozen, tested procedures):**
+[.agent/README-goal-solver.md](.agent/README-goal-solver.md) ·
+[.agent/README-sensitivity.md](.agent/README-sensitivity.md) ·
+[.agent/README-gui-state-wiring.md](.agent/README-gui-state-wiring.md)
 
 ***
 
@@ -164,6 +169,63 @@ x = age) — and of its web-research capability:
 
 - Verification: `testDebugUnitTest` 116 tests / 0 failures / 0 errors (1 opt-in skip);
   `assembleDebug` green.
+
+## 0e. Goal Solver redesign: P1 sweep locus (user request, 2026-08-05)
+
+- **The answer is a TABLE, not a number** (user spec: "solution is a chart, a table P1 / capital\_i
+  couples"): `GoalSolverLogic.solveCapitalVsSavingRatio` sweeps P1 over 0%..100% step 10% (+ an exact
+  flagged row for the user's current P1 when off-grid) and bisection-solves the minimum initial
+  capital per row with the official engine. The locus is non-increasing in P1 (more saving while
+  working → less capital needed today; once the utility floor binds, net monthly accumulation is
+  `surplus − minSpend`, independent of P1). Tests: `GoalSolverSweepTest` (5: monotone locus, row ==
+  single solve, off-grid current row, all-infeasible when threshold unreachable, apply-row plan).
+
+- **Semantics (user questions on P3/P4)**: in the goal plan `P4 = P2 = stopWorkAge` by design.
+  `P3 = 0` does NOT mean "never spend capital": after the stop the engine funds the utility minimum
+  FROM CAPITAL via the `max(baseSpend, minimumSpend)` floor. The spent amount — the user's "unknown
+  P3" — is solved month-by-month by the floor, and for the minimum-capital question that is the
+  optimal path; a single percentage cannot express an age-varying amount, so `(P1, capital_i)` is
+  the complete locus. Characterization lock:
+  `applied_goal_plan_spends_capital_exactly_at_the_threshold_after_stop` (every post-stop monthly
+  utility == threshold within 1e-6; final capital < half the required one).
+
+- **UI**: `GoalSolverDialog` shows the selectable table (radio rows, "(current)" marker, infeasible
+  rows "not reachable"); **Apply Goal Plan** installs the selected row's whole plan (P1 + capital +
+  stop age + floor rule + threshold). Strings `goal_solver_table_p1/table_capital/current_row/
+  row_infeasible` + rewritten `goal_solver_description` (en/it/es). ViewModel state renamed
+  `goalSolverResult` → `goalSweepResult: GoalSweepResult`; `applyGoalSolverCapital` →
+  `applyGoalSolverPlan(row)`. Agent tool `RUN_RETIREMENT_SOLVER` answers for the current P1 only
+  (doc updated; the GUI table covers the whole locus).
+
+- Verification: `testDebugUnitTest` 122 tests / 0 failures / 0 errors (1 opt-in skip);
+  `assembleDebug` green.
+
+## 0f. Failed attempts & dead ends (do NOT repeat)
+
+Consolidated from the campaign's session logs (details also in `.agent/memory/activeContext.md`
+"Gotchas"):
+
+1. **Dead-code trap (the original scheduled-expenses bug)**: `updateSpecificExpenses` existed,
+   tested and correct — but NO screen ever called it. "A function exists" ≠ "a function is
+   wired". Audit wiring, not just presence.
+2. **Parallel Search/Replace on the SAME file clobbers edits** (the RUN\_SENSITIVITY dispatch
+   case was silently lost). Edits to one file: strictly sequential.
+3. **`"...pt / 10%".format(x)`** **crashes** (`Conversion = '%'`) on literal `%` in the template —
+   format the number separately with `Locale.US`.
+4. **Rate-row sensitivity test bug (not a code bug)**: the first expectation divided by the
+   absolute step (0.001) instead of deriving the per-1pp impact (×10) — mismatch was exactly
+   ×100. The implementation's `check()` deltas are in percentage-point units.
+5. **Android** **`strings.xml`** **escaping**: a doubled `\\'` lands LITERALLY in the resource (hit
+   twice, IT strings); raw inner double quotes break AAPT — use typographic “ ” or `\"`.
+   Always re-read the file after string edits.
+6. **Real-LLM e2e is non-deterministic** (OpenAI 429 no-credits; flaky tool-loop completion in
+   the full suite) — kept opt-in via `AGENT_HARNESS_E2E=1` with provider failover.
+7. **Built-in md editing can markdown-escape underscores** in `.md` files — verify after
+   editing, rewrite with Write if artifacts appear. MCP `edit_file` requires BOTH oldText and
+   newText (no pure insertions).
+8. **LLM harness defects found only by the real e2e** (see 0b): repeated tool calls, announce
+   without emitting the command token, multi-command responses executing only the first.
+   Unit tests alone did not surface them.
 
 ***
 

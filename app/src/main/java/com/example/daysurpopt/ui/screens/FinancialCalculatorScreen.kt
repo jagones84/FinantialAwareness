@@ -1,5 +1,6 @@
 package com.example.daysurpopt.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -98,9 +99,9 @@ fun FinancialCalculatorScreen(
             (context as? android.app.Activity)?.recreate()
         },
         goalSolverRunning = viewModel.goalSolverRunning,
-        goalSolverResult = viewModel.goalSolverResult,
+        goalSweepResult = viewModel.goalSweepResult,
         onRunGoalSolver = { stopAge, threshold -> viewModel.runGoalSolver(stopAge, threshold) },
-        onApplyGoalSolver = { viewModel.applyGoalSolverCapital() },
+        onApplyGoalSolver = { row -> viewModel.applyGoalSolverPlan(row) },
         onShowQuickStart = onShowQuickStart
     )
 }
@@ -136,9 +137,9 @@ fun FinancialCalculatorContent(
     onExitCompareMode: () -> Unit,
     onLanguageChange: (String) -> Unit,
     goalSolverRunning: Boolean = false,
-    goalSolverResult: com.example.daysurpopt.logic.GoalSolverResult? = null,
+    goalSweepResult: com.example.daysurpopt.logic.GoalSweepResult? = null,
     onRunGoalSolver: (Int, Double) -> Unit = { _, _ -> },
-    onApplyGoalSolver: () -> Unit = {},
+    onApplyGoalSolver: (com.example.daysurpopt.logic.GoalSweepRow) -> Unit = {},
     onShowQuickStart: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
@@ -752,10 +753,10 @@ fun FinancialCalculatorContent(
         GoalSolverDialog(
             inputs = inputs,
             running = goalSolverRunning,
-            result = goalSolverResult,
+            sweep = goalSweepResult,
             onSolve = onRunGoalSolver,
-            onApply = {
-                onApplyGoalSolver()
+            onApply = { row ->
+                onApplyGoalSolver(row)
                 showGoalSolverDialog = false
             },
             onDismiss = { showGoalSolverDialog = false }
@@ -799,13 +800,19 @@ fun FinancialCalculatorContent(
 private fun GoalSolverDialog(
     inputs: com.example.daysurpopt.domain.FinancialInput,
     running: Boolean,
-    result: com.example.daysurpopt.logic.GoalSolverResult?,
+    sweep: com.example.daysurpopt.logic.GoalSweepResult?,
     onSolve: (Int, Double) -> Unit,
-    onApply: () -> Unit,
+    onApply: (com.example.daysurpopt.logic.GoalSweepRow) -> Unit,
     onDismiss: () -> Unit
 ) {
     var stopAgeText by remember { mutableStateOf(inputs.etaPensione.toString()) }
     var thresholdText by remember { mutableStateOf(String.format(java.util.Locale.US, "%.2f", inputs.sogliaMinimaFunzioneUtilita)) }
+    var selectedRow by remember { mutableStateOf<com.example.daysurpopt.logic.GoalSweepRow?>(null) }
+
+    LaunchedEffect(sweep) {
+        selectedRow = sweep?.rows?.firstOrNull { it.isCurrentPlan && it.isFeasible }
+            ?: sweep?.rows?.firstOrNull { it.isFeasible }
+    }
 
     val stopAge = stopAgeText.trim().toIntOrNull()
     val threshold = thresholdText.replace(',', '.').toDoubleOrNull()
@@ -857,29 +864,77 @@ private fun GoalSolverDialog(
                         Text(stringResource(R.string.goal_solver_solve))
                     }
                 }
-                result?.let { goalResult ->
+                sweep?.let { sweepResult ->
                     HorizontalDivider()
                     Text(
                         text = stringResource(R.string.goal_solver_max_utility) + ": " +
-                            String.format(java.util.Locale.US, "%.4f", goalResult.maxAchievableUtility),
+                            String.format(java.util.Locale.US, "%.4f", sweepResult.maxAchievableUtility),
                         style = MaterialTheme.typography.bodySmall
                     )
-                    if (goalResult.isFeasible && goalResult.requiredCapital != null) {
-                        Text(
-                            text = stringResource(R.string.goal_solver_required_capital) + ": " +
-                                String.format(java.util.Locale.US, "%.2f", goalResult.requiredCapital) + " €",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    if (sweepResult.rows.any { it.isFeasible }) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                            Text(
+                                text = stringResource(R.string.goal_solver_table_p1),
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = stringResource(R.string.goal_solver_table_capital),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 240.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            sweepResult.rows.forEach { row ->
+                                val isSelected = selectedRow == row
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = row.isFeasible) { selectedRow = row }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = null,
+                                        enabled = row.isFeasible
+                                    )
+                                    Text(
+                                        text = String.format(java.util.Locale.US, "%.0f%%", row.p1 * 100.0) +
+                                            if (row.isCurrentPlan) " " + stringResource(R.string.goal_solver_current_row) else "",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        text = if (row.isFeasible) {
+                                            String.format(java.util.Locale.US, "%.0f €", row.requiredCapital)
+                                        } else {
+                                            stringResource(R.string.goal_solver_row_infeasible)
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (row.isFeasible) {
+                                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.error
+                                        }
+                                    )
+                                }
+                            }
+                        }
                         Button(
-                            onClick = onApply,
+                            onClick = { selectedRow?.let(onApply) },
+                            enabled = selectedRow != null && selectedRow!!.isFeasible,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(stringResource(R.string.goal_solver_apply))
                         }
                     } else {
                         Text(
-                            text = goalResult.reason ?: stringResource(R.string.goal_solver_infeasible),
+                            text = stringResource(R.string.goal_solver_infeasible),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )

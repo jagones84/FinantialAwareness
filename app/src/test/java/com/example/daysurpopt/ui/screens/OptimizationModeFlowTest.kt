@@ -7,7 +7,7 @@ import com.example.daysurpopt.domain.ParamsCandidate
 import com.example.daysurpopt.domain.ParetoFrontResult
 import com.example.daysurpopt.domain.ParetoPoint
 import com.example.daysurpopt.domain.SurplusInput
-import com.example.daysurpopt.logic.GoalSolverResult
+import com.example.daysurpopt.logic.GoalSweepResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -171,19 +171,17 @@ class OptimizationModeFlowTest {
             lastParetoReferenceSnapshot = null,
             simulationResultsCount = 0,
             sensitivityResultsCount = 0,
-            goalSolverResult = GoalSolverResult(
-                requiredCapital = 275390.63,
-                isFeasible = true,
-                reason = null,
+            goalSweepResult = GoalSweepResult(
                 threshold = 0.3,
                 stopWorkAge = 45,
-                maxAchievableUtility = 0.2951
+                maxAchievableUtility = 0.2951,
+                rows = emptyList()
             )
         )
 
         val cleared = clearAnalysisStateForTest(state)
 
-        assertEquals(null, cleared.goalSolverResult)
+        assertEquals(null, cleared.goalSweepResult)
     }
 
     @Test

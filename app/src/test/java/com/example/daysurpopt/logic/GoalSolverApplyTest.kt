@@ -135,4 +135,46 @@ class GoalSolverApplyTest {
             }
         )
     }
+
+    /**
+     * Answers "P3 = 0 means not spending capital?": after the stop-work age the
+     * plan has no work income, so the engine funds the utility minimum FROM
+     * CAPITAL, and it spends exactly that amount - no more, no less. The spent
+     * amount is the unknown "how much capital do I need per year for the
+     * threshold", solved year by year by the engine (that is why no single
+     * percentage P3 can express it). Characterization lock of that behavior.
+     */
+    @Test
+    fun applied_goal_plan_spends_capital_exactly_at_the_threshold_after_stop() {
+        val base = baseInputs(threshold)
+        val result = GoalSolverLogic.solveMinimumInitialCapital(
+            baseInputs = base,
+            specificExpenses = emptyList(),
+            surplusData = zeroIncomeSurplus(),
+            stopWorkAge = stopWorkAge,
+            threshold = threshold
+        )
+        assertTrue(result.isFeasible)
+        val required = result.requiredCapital!!
+
+        val applied = GoalSolverLogic.buildGoalApplyInputs(base, result)
+        val years = calculateSimulation(applied, emptyList(), zeroIncomeSurplus())
+
+        val afterStop = years.filter { it.eta >= stopWorkAge }
+        assertTrue(afterStop.isNotEmpty())
+        assertTrue(
+            "With no income after the stop age the plan must erode capital to fund the threshold",
+            years.last().capitaleFineAnno < required * 0.5
+        )
+        afterStop.forEach { year ->
+            year.monthlyUtilitySamples.forEach { sample ->
+                assertEquals(
+                    "After the stop the plan must spend exactly the threshold amount (utility = T, solved per month)",
+                    threshold,
+                    sample,
+                    1e-6
+                )
+            }
+        }
+    }
 }

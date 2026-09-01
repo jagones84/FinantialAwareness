@@ -186,7 +186,7 @@
     <!-- Goal Solver -->
     <string name="goal_solver_button">Goal Solver (Capital Necesario)</string>
     <string name="goal_solver_title">Goal Solver</string>
-    <string name="goal_solver_description">Calcula el capital inicial mínimo necesario para dejar de trabajar a la edad indicada manteniendo la felicidad en el umbral elegido. El resultado vale para el plan objetivo: dejar de trabajar a esa edad, ahorrar hasta ella y gastar exactamente el mínimo de utilidad (P3 = 0). Aplicar instala este plan completo (edad de pensión, P2, P4, P3, umbral y capital), así la simulación oficial cumple la promesa; con el mismo capital el optimizador puede lograr una puntuación mayor con un plan menos conservador.</string>
+    <string name="goal_solver_description">Responde a: “¿cuánto capital necesito HOY para dejar de trabajar a la edad indicada sin bajar nunca del umbral de felicidad?”. La respuesta depende de cuánto ahorres de tu superávit mientras trabajas (P1), así que es una TABLA, no un número único: cada fila es una tasa de ahorro P1 con su capital mínimo. En el plan objetivo ahorras P1 del superávit hasta la edad de parada (P2 = P4 = edad de parada) y desde entonces el plan retira del capital exactamente el importe anual que mantiene la utilidad en el umbral (P3 = 0 significa: sin retiro porcentual extra — el motor gasta del capital el mínimo de utilidad). El capital a dejar al fallecer se sigue respetando. Selecciona una fila y Aplicar instala ese plan completo.</string>
     <string name="goal_solver_stop_age">Edad de Fin de Trabajo</string>
     <string name="goal_solver_threshold">Umbral de Felicidad (0–1)</string>
     <string name="goal_solver_solve">Calcular</string>
@@ -194,6 +194,10 @@
     <string name="goal_solver_required_capital">Capital Inicial Requerido</string>
     <string name="goal_solver_max_utility">Felicidad Máxima Alcanzable</string>
     <string name="goal_solver_apply">Aplicar Plan Objetivo</string>
+    <string name="goal_solver_table_p1">Ahorro P1</string>
+    <string name="goal_solver_table_capital">Capital necesario hoy</string>
+    <string name="goal_solver_current_row">(actual)</string>
+    <string name="goal_solver_row_infeasible">inalcanzable</string>
     <string name="goal_solver_infeasible">Objetivo no alcanzable con el plan actual.</string>
     <string name="goal_solver_invalid_age">La edad de fin de trabajo debe estar entre la edad actual y la de fallecimiento.</string>
     <string name="goal_solver_close">Cerrar</string>

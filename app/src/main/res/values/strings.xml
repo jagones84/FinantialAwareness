@@ -250,7 +250,7 @@
     <!-- Goal Solver -->
     <string name="goal_solver_button">Goal Solver (Capital Needed)</string>
     <string name="goal_solver_title">Goal Solver</string>
-    <string name="goal_solver_description">Computes the minimum initial capital needed to stop working at the given age while keeping happiness at or above the threshold. The result holds for the goal plan: stop working at that age, save until it, and spend exactly the utility minimum (P3 = 0). Apply installs this whole plan (pension age, P2, P4, P3, threshold and capital), so the official simulation reproduces the promise; with the same capital the optimizer may reach a higher score via a less conservative plan.</string>
+    <string name="goal_solver_description">Answers: “how much capital do I need TODAY to quit at the given age and never drop below the happiness threshold?”. The answer depends on how much of your surplus you save while working (P1), so it is a TABLE, not a single number: each row is a saving ratio P1 with its minimum capital. In the goal plan you save P1 of the surplus until the stop age (P2 = P4 = stop age) and from then on the plan draws from capital exactly the yearly amount that keeps utility at the threshold (P3 = 0 means: no extra percentage draw — the engine spends the utility minimum from capital). Your capital-to-keep-at-death is still enforced. Select a row and Apply installs that whole plan.</string>
     <string name="goal_solver_stop_age">Stop Work Age</string>
     <string name="goal_solver_threshold">Happiness Threshold (0–1)</string>
     <string name="goal_solver_solve">Solve</string>
@@ -258,6 +258,10 @@
     <string name="goal_solver_required_capital">Required Initial Capital</string>
     <string name="goal_solver_max_utility">Max Achievable Utility</string>
     <string name="goal_solver_apply">Apply Goal Plan</string>
+    <string name="goal_solver_table_p1">Saving ratio P1</string>
+    <string name="goal_solver_table_capital">Capital needed today</string>
+    <string name="goal_solver_current_row">(current)</string>
+    <string name="goal_solver_row_infeasible">not reachable</string>
     <string name="goal_solver_infeasible">Goal not reachable with the current plan.</string>
     <string name="goal_solver_invalid_age">Stop age must be between your current age and death age.</string>
     <string name="goal_solver_close">Close</string>

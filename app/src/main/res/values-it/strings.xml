@@ -236,7 +236,7 @@
     <!-- Goal Solver -->
     <string name="goal_solver_button">Goal Solver (Capitale Necessario)</string>
     <string name="goal_solver_title">Goal Solver</string>
-    <string name="goal_solver_description">Calcola il capitale iniziale minimo necessario per smettere di lavorare all\'età indicata mantenendo la felicità alla soglia scelta. Il risultato vale per il piano obiettivo: smettere di lavorare a quell\'età, risparmiare fino ad essa e spendere esattamente il minimo di utilità (P3 = 0). Applica installa questo piano completo (età pensionamento, P2, P4, P3, soglia e capitale), così la simulazione ufficiale rispetta la promessa; con lo stesso capitale l\'ottimizzatore può ottenere un punteggio maggiore con un piano meno conservativo.</string>
+    <string name="goal_solver_description">Risponde a: “quanto capitale mi serve OGGI per smettere di lavorare all\'età indicata senza mai scendere sotto la soglia di felicità?”. La risposta dipende da quanto surplus risparmi mentre lavori (P1), quindi è una TABELLA, non un numero singolo: ogni riga è un rapporto di risparmio P1 con il suo capitale minimo. Nel piano obiettivo risparmi P1 del surplus fino all\'età di stop (P2 = P4 = età di stop) e da lì in poi il piano preleva dal capitale esattamente l\'importo annuo che mantiene l\'utilità alla soglia (P3 = 0 significa: nessun prelievo percentuale extra — il motore spende dal capitale il minimo di utilità). Il capitale da lasciare alla morte è comunque rispettato. Seleziona una riga e Applica installa quel piano completo.</string>
     <string name="goal_solver_stop_age">Età di Fine Lavoro</string>
     <string name="goal_solver_threshold">Soglia di Felicità (0–1)</string>
     <string name="goal_solver_solve">Calcola</string>
@@ -244,6 +244,10 @@
     <string name="goal_solver_required_capital">Capitale Iniziale Richiesto</string>
     <string name="goal_solver_max_utility">Felicità Massima Raggiungibile</string>
     <string name="goal_solver_apply">Applica Piano Obiettivo</string>
+    <string name="goal_solver_table_p1">Risparmio P1</string>
+    <string name="goal_solver_table_capital">Capitale necessario oggi</string>
+    <string name="goal_solver_current_row">(attuale)</string>
+    <string name="goal_solver_row_infeasible">irraggiungibile</string>
     <string name="goal_solver_infeasible">Obiettivo non raggiungibile con il piano attuale.</string>
     <string name="goal_solver_invalid_age">L\'età di fine lavoro deve essere tra l\'età attuale e l\'età di morte.</string>
     <string name="goal_solver_close">Chiudi</string>
