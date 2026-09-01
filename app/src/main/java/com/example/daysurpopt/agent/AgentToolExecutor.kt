@@ -221,9 +221,9 @@ object AgentToolExecutor {
             }
 
             if (results.isEmpty()) {
-                "\n\n**Sensitivity Analysis:**\n- No sensitivity data: the base objective is non-positive."
+                "\n\n**Sensitivity Analysis (impact on average utility):**\n- No sensitivity data: the base average utility is non-positive."
             } else {
-                "\n\n**Sensitivity Analysis:**\n" + results.joinToString("\n") { res ->
+                "\n\n**Sensitivity Analysis (impact on average utility):**\n" + results.joinToString("\n") { res ->
                     val impact = String.format(Locale.US, "%.4f", res.scaledImpact)
                     "- ${sensitivityName(res.nameResId)}: $impact pt / ${sensitivityUnit(res.unitResId)}"
                 }
@@ -247,7 +247,6 @@ object AgentToolExecutor {
         R.string.sens_debt_rate -> "Debt Interest Rate"
         R.string.sens_utility_threshold -> "Utility Threshold"
         R.string.sens_max_spending -> "Max Utility Spending"
-        R.string.sens_bonus_weight -> "Bonus Weight (w)"
         R.string.sens_surplus -> "Daily Surplus"
         else -> "Parameter"
     }
@@ -259,7 +258,6 @@ object AgentToolExecutor {
         R.string.unit_pt_1pp -> "1pp"
         R.string.unit_pt_001 -> "0.01"
         R.string.unit_pt_100eur -> "100€ month"
-        R.string.unit_pt_01 -> "0.1"
         else -> "unit"
     }
 

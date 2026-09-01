@@ -11,17 +11,24 @@ import kotlin.random.Random
 
 object OptimizationLogic {
 
+    /**
+     * One-at-a-time sensitivity of the AVERAGE UTILITY (happiness) with respect to
+     * each input, expressed per the unit stated in [SensitivityResult.unitResId]
+     * (e.g. the daily-surplus row is the utility change per +100 EUR/month of
+     * extra earnings). Not the scalarized objective: bonusStdWeight defines the
+     * objective itself and does not move the average utility, so it has no row.
+     */
     suspend fun runSensitivityAnalysis(
         baseInputs: FinancialInput,
         specificExpenses: List<SpecificExpense>,
         surplusData: SurplusInput
     ): List<SensitivityResult> {
         val results = mutableListOf<SensitivityResult>()
-        
-        val (baseObjective, _) = withContext(Dispatchers.Default) {
-            calculateSimulationWithWeight(baseInputs, specificExpenses, surplusData)
+
+        val baseUtility = withContext(Dispatchers.Default) {
+            calculateAverageUtilityFromYears(calculateSimulation(baseInputs, specificExpenses, surplusData))
         }
-        if (baseObjective <= 0.0) {
+        if (!baseUtility.isFinite() || baseUtility <= 0.0) {
             return emptyList()
         }
 
@@ -33,16 +40,19 @@ object OptimizationLogic {
             update: (FinancialInput, Double) -> FinancialInput
         ) {
             var effectiveDelta = delta
-            var (newObjective, _) = withContext(Dispatchers.Default) {
-                calculateSimulationWithWeight(update(baseInputs, effectiveDelta), specificExpenses, surplusData)
+            var newUtility = withContext(Dispatchers.Default) {
+                calculateAverageUtilityFromYears(
+                    calculateSimulation(update(baseInputs, effectiveDelta), specificExpenses, surplusData)
+                )
             }
 
-            if (abs(newObjective - baseObjective) < 1e-9) {
+            if (abs(newUtility - baseUtility) < 1e-9) {
                 effectiveDelta = -delta
-                val (oppositeObjective, _) = withContext(Dispatchers.Default) {
-                    calculateSimulationWithWeight(update(baseInputs, effectiveDelta), specificExpenses, surplusData)
+                newUtility = withContext(Dispatchers.Default) {
+                    calculateAverageUtilityFromYears(
+                        calculateSimulation(update(baseInputs, effectiveDelta), specificExpenses, surplusData)
+                    )
                 }
-                newObjective = oppositeObjective
             }
 
             if (abs(effectiveDelta) < 1e-9) {
@@ -50,7 +60,7 @@ object OptimizationLogic {
                 return
             }
 
-            val sensitivity = (newObjective - baseObjective) / effectiveDelta
+            val sensitivity = (newUtility - baseUtility) / effectiveDelta
             results.add(SensitivityResult(nameResId, sensitivity * scale, unitResId))
         }
 
@@ -75,14 +85,17 @@ object OptimizationLogic {
         check(R.string.sens_utility_threshold, 0.01, 0.01, R.string.unit_pt_001) { i, d -> i.copy(sogliaMinimaFunzioneUtilita = i.sogliaMinimaFunzioneUtilita + d) }
 
         check(R.string.sens_max_spending, 1.0, scale100eurMonth, R.string.unit_pt_100eur) { i, d -> i.copy(valoreSpesaGiornalieraMaxUtilita = i.valoreSpesaGiornalieraMaxUtilita + d) }
-        check(R.string.sens_bonus_weight, 0.01, 0.1, R.string.unit_pt_01) { i, d -> i.copy(bonusStdWeight = i.bonusStdWeight + d) }
 
-        // Surplus Sensitivity (special case)
+        // Surplus Sensitivity (special case: +1 EUR/day of extra earnings)
         val surplusDelta = 1.0
-        val (surplusObj, _) = withContext(Dispatchers.Default) { calculateSimulationWithWeight(baseInputs, specificExpenses, surplusData, surplusOffset = surplusDelta) }
-        val surplusSensitivity = (surplusObj - baseObjective) / surplusDelta
+        val surplusUtility = withContext(Dispatchers.Default) {
+            calculateAverageUtilityFromYears(
+                calculateSimulation(baseInputs, specificExpenses, surplusData, surplusOffset = surplusDelta)
+            )
+        }
+        val surplusSensitivity = (surplusUtility - baseUtility) / surplusDelta
         results.add(SensitivityResult(R.string.sens_surplus, surplusSensitivity * scale100eurMonth, R.string.unit_pt_100eur))
-        
+
         return results.sortedByDescending { abs(it.scaledImpact) }
     }
 

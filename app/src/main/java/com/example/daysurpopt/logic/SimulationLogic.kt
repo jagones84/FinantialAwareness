@@ -463,6 +463,19 @@ fun calculateObjectivesFromYears(
     )
 }
 
+/**
+ * Average utility across the whole plan ("happiness"), mirroring the aggregation
+ * used for the objective: all monthly samples when available, otherwise the yearly
+ * aggregate. This is the metric the sensitivity analysis refers to.
+ */
+fun calculateAverageUtilityFromYears(years: List<SimulationYear>): Double {
+    if (years.isEmpty()) return 0.0
+    val samples = years.flatMap { year ->
+        if (year.monthlyUtilitySamples.isNotEmpty()) year.monthlyUtilitySamples else listOf(year.funzioneUtilita)
+    }
+    return samples.average()
+}
+
 fun calculateSimulationWithWeight(
     inputs: FinancialInput,
     specificExpenses: List<SpecificExpense>,

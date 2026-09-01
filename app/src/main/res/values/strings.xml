@@ -55,7 +55,7 @@
     <string name="copyright_notice">Copyright (c) 2025 Giovanni Mauceri. All rights reserved.\nThis application is for personal use only. Unauthorized distribution or commercial use is strictly prohibited.</string>
     <string name="disclaimer">Disclaimer: This application is for informational purposes only and does not constitute financial advice. The developer is not a financial advisor.</string>
     <string name="ga_optimization_result">Objective Function (GA): %1$.3f (w=%2$.2f)\nRefined Objective Function: %3$.3f\nP1=%4$.2f P2=%5$d P3=%6$.2f P4=%7$d</string>
-    <string name="sensitivity_calculation_failed">Could not calculate sensitivity (objective is zero or negative).</string>
+    <string name="sensitivity_calculation_failed">Could not calculate sensitivity (average utility is zero or negative).</string>
     <string name="pdf_report_title">Financial Awareness Simulation Report</string>
     <string name="pdf_generated_on">Generated on: %1$s</string>
     <string name="pdf_section_user_financial">User &amp; Financial Data</string>
@@ -250,14 +250,14 @@
     <!-- Goal Solver -->
     <string name="goal_solver_button">Goal Solver (Capital Needed)</string>
     <string name="goal_solver_title">Goal Solver</string>
-    <string name="goal_solver_description">Computes the minimum initial capital needed to stop working at the given age while keeping happiness at or above the threshold. Uses your current income, expenses and assumptions.</string>
+    <string name="goal_solver_description">Computes the minimum initial capital needed to stop working at the given age while keeping happiness at or above the threshold. The result holds for the goal plan: stop working at that age, save until it, and spend exactly the utility minimum (P3 = 0). Apply installs this whole plan (pension age, P2, P4, P3, threshold and capital), so the official simulation reproduces the promise; with the same capital the optimizer may reach a higher score via a less conservative plan.</string>
     <string name="goal_solver_stop_age">Stop Work Age</string>
     <string name="goal_solver_threshold">Happiness Threshold (0–1)</string>
     <string name="goal_solver_solve">Solve</string>
     <string name="goal_solver_solving">Solving…</string>
     <string name="goal_solver_required_capital">Required Initial Capital</string>
     <string name="goal_solver_max_utility">Max Achievable Utility</string>
-    <string name="goal_solver_apply">Apply to Initial Capital</string>
+    <string name="goal_solver_apply">Apply Goal Plan</string>
     <string name="goal_solver_infeasible">Goal not reachable with the current plan.</string>
     <string name="goal_solver_invalid_age">Stop age must be between your current age and death age.</string>
     <string name="goal_solver_close">Close</string>

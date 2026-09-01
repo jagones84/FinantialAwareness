@@ -74,7 +74,7 @@
     <string name="copyright_notice">Copyright (c) 2025 Giovanni Mauceri. Todos los derechos reservados.\nEsta aplicación es solo para uso personal. La distribución o el uso comercial no autorizados están estrictamente prohibidos.</string>
     <string name="disclaimer">Descargo de responsabilidad: Esta aplicación es solo para fines informativos y no constituye asesoramiento financiero. El desarrollador no es un asesor financiero.</string>
     <string name="ga_optimization_result">Función Objetivo (GA): %1$.3f (w=%2$.2f)\nFunción Objetivo refinada: %3$.3f\nP1=%4$.2f P2=%5$d P3=%6$.2f P4=%7$d</string>
-    <string name="sensitivity_calculation_failed">No se pudo calcular la sensibilidad (objetivo es cero o negativo).</string>
+    <string name="sensitivity_calculation_failed">No se pudo calcular la sensibilidad (utilidad media es cero o negativa).</string>
     <string name="pdf_report_title">Informe de Simulación de Conciencia Financiera</string>
     <string name="pdf_generated_on">Generado el: %1$s</string>
     <string name="pdf_section_user_financial">Datos de Usuario y Financieros</string>
@@ -186,14 +186,14 @@
     <!-- Goal Solver -->
     <string name="goal_solver_button">Goal Solver (Capital Necesario)</string>
     <string name="goal_solver_title">Goal Solver</string>
-    <string name="goal_solver_description">Calcula el capital inicial mínimo necesario para dejar de trabajar a la edad indicada manteniendo la felicidad en el umbral elegido. Usa tus ingresos, gastos y supuestos actuales.</string>
+    <string name="goal_solver_description">Calcula el capital inicial mínimo necesario para dejar de trabajar a la edad indicada manteniendo la felicidad en el umbral elegido. El resultado vale para el plan objetivo: dejar de trabajar a esa edad, ahorrar hasta ella y gastar exactamente el mínimo de utilidad (P3 = 0). Aplicar instala este plan completo (edad de pensión, P2, P4, P3, umbral y capital), así la simulación oficial cumple la promesa; con el mismo capital el optimizador puede lograr una puntuación mayor con un plan menos conservador.</string>
     <string name="goal_solver_stop_age">Edad de Fin de Trabajo</string>
     <string name="goal_solver_threshold">Umbral de Felicidad (0–1)</string>
     <string name="goal_solver_solve">Calcular</string>
     <string name="goal_solver_solving">Calculando…</string>
     <string name="goal_solver_required_capital">Capital Inicial Requerido</string>
     <string name="goal_solver_max_utility">Felicidad Máxima Alcanzable</string>
-    <string name="goal_solver_apply">Aplicar al Capital Inicial</string>
+    <string name="goal_solver_apply">Aplicar Plan Objetivo</string>
     <string name="goal_solver_infeasible">Objetivo no alcanzable con el plan actual.</string>
     <string name="goal_solver_invalid_age">La edad de fin de trabajo debe estar entre la edad actual y la de fallecimiento.</string>
     <string name="goal_solver_close">Cerrar</string>

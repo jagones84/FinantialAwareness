@@ -58,6 +58,22 @@ object GoalSolverLogic {
     }
 
     /**
+     * Builds the inputs to install when the user APPLIES the solver result:
+     * the full goal plan (stop work at the solved age, save until it, spend
+     * exactly the utility minimum) with the required initial capital — not
+     * just the capital. Applying the capital alone would run the user's own
+     * plan shape and contradict the solver's promise.
+     */
+    fun buildGoalApplyInputs(
+        baseInputs: FinancialInput,
+        result: GoalSolverResult
+    ): FinancialInput {
+        val capital = result.requiredCapital
+            ?: throw IllegalArgumentException("Cannot apply an infeasible goal result: ${result.reason}")
+        return buildGoalWhatIfInputs(baseInputs, result.threshold, result.stopWorkAge, capital)
+    }
+
+    /**
      * Validates that [threshold] is achievable at all: the maximum achievable utility is
      * the utility-curve ceiling times the minimum degradation over the simulated ages.
      * With default curves the ceiling is ~0.9347 (the baseline logistic at

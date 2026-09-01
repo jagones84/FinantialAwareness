@@ -58,7 +58,7 @@
     <string name="nav_surplus">Surplus</string>
     <string name="nav_charts">Grafici</string>
     <string name="nav_assumptions">Assunzioni</string>
-    <string name="sensitivity_calculation_failed">Impossibile calcolare la sensibilità (obiettivo nullo o negativo).</string>
+    <string name="sensitivity_calculation_failed">Impossibile calcolare la sensibilità (utilità media nulla o negativa).</string>
     <string name="pdf_report_title">Report Simulazione Financial Awareness</string>
     <string name="pdf_generated_on">Generato il: %1$s</string>
     <string name="pdf_section_user_financial">Dati Utente &amp; Finanziari</string>
@@ -236,14 +236,14 @@
     <!-- Goal Solver -->
     <string name="goal_solver_button">Goal Solver (Capitale Necessario)</string>
     <string name="goal_solver_title">Goal Solver</string>
-    <string name="goal_solver_description">Calcola il capitale iniziale minimo necessario per smettere di lavorare all\'età indicata mantenendo la felicità alla soglia scelta. Usa entrate, spese e assunzioni correnti.</string>
+    <string name="goal_solver_description">Calcola il capitale iniziale minimo necessario per smettere di lavorare all\'età indicata mantenendo la felicità alla soglia scelta. Il risultato vale per il piano obiettivo: smettere di lavorare a quell\'età, risparmiare fino ad essa e spendere esattamente il minimo di utilità (P3 = 0). Applica installa questo piano completo (età pensionamento, P2, P4, P3, soglia e capitale), così la simulazione ufficiale rispetta la promessa; con lo stesso capitale l\'ottimizzatore può ottenere un punteggio maggiore con un piano meno conservativo.</string>
     <string name="goal_solver_stop_age">Età di Fine Lavoro</string>
     <string name="goal_solver_threshold">Soglia di Felicità (0–1)</string>
     <string name="goal_solver_solve">Calcola</string>
     <string name="goal_solver_solving">Calcolo…</string>
     <string name="goal_solver_required_capital">Capitale Iniziale Richiesto</string>
     <string name="goal_solver_max_utility">Felicità Massima Raggiungibile</string>
-    <string name="goal_solver_apply">Applica al Capitale Iniziale</string>
+    <string name="goal_solver_apply">Applica Piano Obiettivo</string>
     <string name="goal_solver_infeasible">Obiettivo non raggiungibile con il piano attuale.</string>
     <string name="goal_solver_invalid_age">L\'età di fine lavoro deve essere tra l\'età attuale e l\'età di morte.</string>
     <string name="goal_solver_close">Chiudi</string>

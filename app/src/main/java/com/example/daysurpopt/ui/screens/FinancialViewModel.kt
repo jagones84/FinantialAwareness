@@ -753,8 +753,9 @@ class FinancialViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun applyGoalSolverCapital() {
-        val capital = goalSolverResult?.requiredCapital ?: return
-        updateInputs(inputs.copy(capitaleIniziale = capital))
+        val result = goalSolverResult ?: return
+        if (result.requiredCapital == null) return
+        updateInputs(GoalSolverLogic.buildGoalApplyInputs(inputs, result))
         runSimulation()
     }
 

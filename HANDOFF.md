@@ -56,7 +56,7 @@ All fixes were applied **red-first** (failing test → implementation → green 
   Goal Solver dialog, not in the main results card), optional "apply optimization results" agent
   write-back tool, PDF/charts/profile-management agent tools.
 
-- Verification: `testDebugUnitTest` 111 tests / 0 failures / 0 errors (1 opt-in skip); `assembleDebug` green.
+- Verification: `testDebugUnitTest` 116 tests / 0 failures / 0 errors (1 opt-in skip); `assembleDebug` green.
 
 ## 0b. TO VALIDATE — assumption curves access & web research (user request, 2026-08-05)
 
@@ -133,6 +133,36 @@ x = age) — and of its web-research capability:
   language & compare state in their own prefs.
 
 - Verification: `testDebugUnitTest` 111 tests / 0 failures / 0 errors (1 opt-in skip);
+  `assembleDebug` green.
+
+## 0d. Sensitivity metric + Goal Solver apply (user request, 2026-08-05)
+
+- **Sensitivity now measures the AVERAGE UTILITY (happiness)**, not the scalarized objective
+  `fObjW = Avg*((1-w)+w*Stability)` (user: "sensitivity of average utility, not fobj").
+  New `SimulationLogic.calculateAverageUtilityFromYears` (monthly samples, else yearly aggregate —
+  same sampling as the objective) is the metric; unit steps unchanged (P1 per 10pp, P2/P4 per year,
+  monetary per 10k€, rates per 1pp, Daily Surplus per +100 €/month of extra earnings). The
+  "Bonus Weight (w)" row was REMOVED (w defines the objective; it never moves the average utility).
+  Agent header: "**Sensitivity Analysis (impact on average utility):**"; system prompt documents the
+  metric; `sensitivity_calculation_failed` reworded (en/it/es). Rate rows verified: they report
+  utility points per +1 percentage point (implementation perturbs +0.1pp and divides by 0.1 →
+  `dU/d(rate)·0.01` — correct).
+
+- **Goal Solver contradiction root-caused**: the bisection always used the official engine — the
+  defect was the APPLY path, which installed ONLY `capitaleIniziale`, so the official simulation
+  kept the user's own plan shape (etaPensione/p2/p3/p4) and contradicted the solver's promise.
+  New `GoalSolverLogic.buildGoalApplyInputs(baseInputs, result)` installs the FULL goal plan
+  (etaPensione = p2 = p4 = stopWorkAge, p3 = 0, sogliaMinima = T, required capital, user curves
+  preserved); `applyGoalSolverCapital` uses it. Button "Apply Goal Plan" / "Applica Piano
+  Obiettivo" / "Aplicar Plan Objetivo"; dialog description (en/it/es) explains that with the same
+  capital the OPTIMIZER may reach a higher score via a less conservative plan (no per-sample floor,
+  may spend above the utility minimum) — a different question, not an error.
+
+- Tests (red-first): `SensitivityAvgUtilityTest` (3), `GoalSolverApplyTest` (2 — apply = full plan +
+  the applied plan satisfies the goal in the official simulation); `AgentSensitivityToolTest`
+  header updated.
+
+- Verification: `testDebugUnitTest` 116 tests / 0 failures / 0 errors (1 opt-in skip);
   `assembleDebug` green.
 
 ***

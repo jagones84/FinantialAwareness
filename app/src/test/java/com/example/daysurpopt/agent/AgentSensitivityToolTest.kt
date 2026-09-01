@@ -70,7 +70,7 @@ class AgentSensitivityToolTest {
 
         assertTrue(
             "Output must have the sensitivity header:\n$output",
-            output.contains("**Sensitivity Analysis:**")
+            output.contains("**Sensitivity Analysis (impact on average utility):**")
         )
         val impacts = parseImpacts(output)
         assertTrue("Output must list several parameters:\n$output", impacts.size >= 10)
