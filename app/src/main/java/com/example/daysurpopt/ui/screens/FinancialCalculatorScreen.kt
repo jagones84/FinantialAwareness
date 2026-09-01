@@ -1,8 +1,11 @@
 package com.example.daysurpopt.ui.screens
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -13,12 +16,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.daysurpopt.R
 import com.example.daysurpopt.data.LanguageRepository
@@ -823,7 +836,10 @@ private fun GoalSolverDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.goal_solver_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(
                     text = stringResource(R.string.goal_solver_description),
                     style = MaterialTheme.typography.bodySmall,
@@ -925,6 +941,25 @@ private fun GoalSolverDialog(
                                 }
                             }
                         }
+                        val chartModel = com.example.daysurpopt.logic.GoalLocusChartModelBuilder.build(
+                            sweep = sweepResult,
+                            currentP1 = inputs.p1SavingRatioSurplus,
+                            currentCapital = inputs.capitaleIniziale
+                        )
+                        if (chartModel.locusPoints.isNotEmpty()) {
+                            Text(
+                                text = stringResource(R.string.goal_solver_chart_title),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            GoalLocusChart(
+                                model = chartModel,
+                                axisXTitle = stringResource(R.string.goal_solver_chart_axis_p1),
+                                axisYTitle = stringResource(R.string.goal_solver_chart_axis_capital),
+                                locusLegend = stringResource(R.string.goal_solver_trace_locus),
+                                currentLegend = stringResource(R.string.goal_solver_trace_current),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                         Button(
                             onClick = { selectedRow?.let(onApply) },
                             enabled = selectedRow != null && selectedRow!!.isFeasible,
@@ -948,6 +983,216 @@ private fun GoalSolverDialog(
         }
     )
 }
+
+@Composable
+private fun GoalLocusChart(
+    model: com.example.daysurpopt.logic.GoalLocusChartModel,
+    axisXTitle: String,
+    axisYTitle: String,
+    locusLegend: String,
+    currentLegend: String,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val locusColor = Color(0xFF00E5FF)
+    val pointColor = Color(0xFFFFD600)
+    val markerColor = Color(0xFFFF5252)
+    val gridColor = Color(0xFF444444)
+    val axisColor = Color(0xFFE0E0E0)
+    val labelColor = Color(0xFFE0E0E0)
+
+    val yTicks = remember(model) {
+        val maxCapital = (model.locusPoints.maxOfOrNull { it.requiredCapital } ?: 0.0)
+            .coerceAtLeast(model.currentSimulationMarker.requiredCapital)
+        com.example.daysurpopt.logic.GoalLocusChartGeometry.yAxisTicks(maxCapital)
+    }
+    val labelPaint = remember(density) {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = android.graphics.Color.parseColor("#E0E0E0")
+            textSize = with(density) { 10.sp.toPx() }
+        }
+    }
+    val titlePaint = remember(density) {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = android.graphics.Color.parseColor("#E0E0E0")
+            textSize = with(density) { 10.sp.toPx() }
+        }
+    }
+    val gridPaint = remember {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = android.graphics.Color.parseColor("#444444")
+            strokeWidth = 1f
+        }
+    }
+    var probe by remember(model) { mutableStateOf<com.example.daysurpopt.logic.GoalLocusChartPoint?>(null) }
+    val probeBgPaint = remember {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = android.graphics.Color.parseColor("#DD1E1E1E")
+        }
+    }
+    val probeTextPaint = remember(density) {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = android.graphics.Color.WHITE
+            textSize = with(density) { 10.sp.toPx() }
+        }
+    }
+
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 18.dp, height = 3.dp)
+                    .background(locusColor)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(locusLegend, style = MaterialTheme.typography.labelSmall, color = labelColor)
+            Spacer(modifier = Modifier.width(12.dp))
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .background(markerColor, CircleShape)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(currentLegend, style = MaterialTheme.typography.labelSmall, color = labelColor)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .pointerInput(model, yTicks) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val changes = event.changes
+                            val pos = changes.firstOrNull()?.position ?: continue
+                            val pressed = changes.any { it.pressed }
+                            val isHover = changes.any { it.type == PointerType.Mouse }
+                            if (!pressed && !isHover) continue
+                            val leftPadPx = with(density) { 46.dp.toPx() }
+                            val rightPadPx = with(density) { 10.dp.toPx() }
+                            val plotWidth = size.width - leftPadPx - rightPadPx
+                            if (plotWidth <= 0f) continue
+                            val xPct = ((pos.x - leftPadPx) / plotWidth * 100.0).coerceIn(0.0, 100.0)
+                            probe = com.example.daysurpopt.logic.GoalLocusChartGeometry.nearestProbePoint(
+                                model.locusPoints, model.currentSimulationMarker, xPct
+                            )
+                            if (pressed) changes.forEach { it.consume() }
+                        }
+                    }
+                }
+        ) {
+            val labelPx = with(density) { 10.sp.toPx() }
+            val leftPad = with(density) { 46.dp.toPx() }
+            val bottomPad = with(density) { 38.dp.toPx() }
+            val topPad = with(density) { 8.dp.toPx() }
+            val rightPad = with(density) { 10.dp.toPx() }
+
+            val plotLeft = leftPad
+            val plotTop = topPad
+            val plotRight = size.width - rightPad
+            val plotBottom = size.height - bottomPad
+            val plotW = plotRight - plotLeft
+            val plotH = plotBottom - plotTop
+
+            val yMax = yTicks.last()
+            fun xPx(p1Percent: Double) = plotLeft + (p1Percent / 100.0).toFloat() * plotW
+            fun yPx(capital: Double) = plotBottom - (capital / yMax).toFloat() * plotH
+
+            drawIntoCanvas { canvas ->
+                val nc = canvas.nativeCanvas
+                labelPaint.textAlign = android.graphics.Paint.Align.RIGHT
+                yTicks.forEach { tick ->
+                    val y = yPx(tick)
+                    nc.drawLine(plotLeft, y, plotRight, y, gridPaint)
+                    nc.drawText(formatCapital(tick), plotLeft - 6f, y + labelPx / 3f, labelPaint)
+                }
+                labelPaint.textAlign = android.graphics.Paint.Align.CENTER
+                listOf(0, 25, 50, 75, 100).forEach { pct ->
+                    val x = xPx(pct.toDouble())
+                    nc.drawLine(x, plotTop, x, plotBottom, gridPaint)
+                    nc.drawText("$pct%", x, plotBottom + labelPx + 2f, labelPaint)
+                }
+                titlePaint.textAlign = android.graphics.Paint.Align.CENTER
+                val yTitleX = plotLeft - 36f
+                val yTitleY = (plotTop + plotBottom) / 2f
+                nc.save()
+                nc.rotate(-90f, yTitleX, yTitleY)
+                nc.drawText(axisYTitle, yTitleX, yTitleY + titlePaint.textSize / 3f, titlePaint)
+                nc.restore()
+                nc.drawText(axisXTitle, (plotLeft + plotRight) / 2f, size.height - 3f, titlePaint)
+            }
+            drawLine(axisColor, Offset(plotLeft, plotTop), Offset(plotLeft, plotBottom), strokeWidth = 2f)
+            drawLine(axisColor, Offset(plotLeft, plotBottom), Offset(plotRight, plotBottom), strokeWidth = 2f)
+
+            val path = Path()
+            model.locusPoints.forEachIndexed { index, p ->
+                val o = Offset(xPx(p.p1Percent), yPx(p.requiredCapital))
+                if (index == 0) path.moveTo(o.x, o.y) else path.lineTo(o.x, o.y)
+            }
+            drawPath(path, locusColor, style = Stroke(width = 3f))
+            val dotRadius = with(density) { 2.5.dp.toPx() }
+            model.locusPoints.forEach { p ->
+                drawCircle(pointColor, radius = dotRadius, center = Offset(xPx(p.p1Percent), yPx(p.requiredCapital)))
+            }
+            drawCircle(
+                markerColor,
+                radius = with(density) { 5.5.dp.toPx() },
+                center = Offset(
+                    xPx(model.currentSimulationMarker.p1Percent),
+                    yPx(model.currentSimulationMarker.requiredCapital)
+                )
+            )
+            probe?.let { p ->
+                val px = xPx(p.p1Percent)
+                val py = yPx(p.requiredCapital)
+                drawLine(
+                    labelColor,
+                    Offset(px, plotTop),
+                    Offset(px, plotBottom),
+                    strokeWidth = 1.5f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
+                )
+                drawCircle(
+                    Color.White,
+                    radius = dotRadius + 2f,
+                    center = Offset(px, py),
+                    style = Stroke(width = 2f)
+                )
+                drawIntoCanvas { canvas ->
+                    val nc = canvas.nativeCanvas
+                    val text = "P1 " + String.format(java.util.Locale.US, "%.0f", p.p1Percent) +
+                        "% · " + String.format(java.util.Locale.US, "%.0f", p.requiredCapital) + " €"
+                    val textW = probeTextPaint.measureText(text)
+                    val boxW = textW + 16f
+                    val boxH = labelPx + 12f
+                    val bx = (px - boxW / 2f).coerceIn(plotLeft, plotRight - boxW)
+                    val by = (py - boxH - 12f).coerceAtLeast(plotTop)
+                    nc.drawRoundRect(android.graphics.RectF(bx, by, bx + boxW, by + boxH), 8f, 8f, probeBgPaint)
+                    probeTextPaint.textAlign = android.graphics.Paint.Align.LEFT
+                    nc.drawText(text, bx + 8f, by + boxH - 7f, probeTextPaint)
+                }
+            }
+        }
+    }
+}
+
+private fun formatCapital(v: Double): String =
+    if (v >= 1000.0) {
+        val k = v / 1000.0
+        if (k % 1.0 == 0.0) "${k.toInt()}k" else String.format(java.util.Locale.US, "%.1fk", k)
+    } else {
+        if (v % 1.0 == 0.0) "${v.toInt()}" else String.format(java.util.Locale.US, "%.1f", v)
+    }
 
 @Composable
 private fun OptimizationModeButton(

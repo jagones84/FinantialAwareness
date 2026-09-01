@@ -244,6 +244,11 @@
     <string name="goal_solver_required_capital">Capitale Iniziale Richiesto</string>
     <string name="goal_solver_max_utility">Felicità Massima Raggiungibile</string>
     <string name="goal_solver_apply">Applica Piano Obiettivo</string>
+    <string name="goal_solver_chart_title">Capitale necessario vs risparmio (locus del solver)</string>
+    <string name="goal_solver_chart_axis_p1">Risparmio P1 (%)</string>
+    <string name="goal_solver_chart_axis_capital">Capitale C_I (EUR)</string>
+    <string name="goal_solver_trace_locus">Capitale minimo</string>
+    <string name="goal_solver_trace_current">Simulazione attuale</string>
     <string name="goal_solver_table_p1">Risparmio P1</string>
     <string name="goal_solver_table_capital">Capitale necessario oggi</string>
     <string name="goal_solver_current_row">(attuale)</string>

@@ -52,6 +52,14 @@ android {
         )
     }
 
+    testOptions {
+        unitTests {
+            // Lets pure-UI builders that call android.util.Log (e.g. PlotlySpecBuilder)
+            // run in plain JVM unit tests: unmocked framework methods return defaults.
+            isReturnDefaultValues = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true

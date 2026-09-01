@@ -258,6 +258,11 @@
     <string name="goal_solver_required_capital">Required Initial Capital</string>
     <string name="goal_solver_max_utility">Max Achievable Utility</string>
     <string name="goal_solver_apply">Apply Goal Plan</string>
+    <string name="goal_solver_chart_title">Capital needed vs saving ratio (solver locus)</string>
+    <string name="goal_solver_chart_axis_p1">Saving ratio P1 (%)</string>
+    <string name="goal_solver_chart_axis_capital">Capital C_I (EUR)</string>
+    <string name="goal_solver_trace_locus">Minimum capital</string>
+    <string name="goal_solver_trace_current">Current simulation</string>
     <string name="goal_solver_table_p1">Saving ratio P1</string>
     <string name="goal_solver_table_capital">Capital needed today</string>
     <string name="goal_solver_current_row">(current)</string>

@@ -167,8 +167,7 @@ x = age) — and of its web-research capability:
   the applied plan satisfies the goal in the official simulation); `AgentSensitivityToolTest`
   header updated.
 
-- Verification: `testDebugUnitTest` 116 tests / 0 failures / 0 errors (1 opt-in skip);
-  `assembleDebug` green.
+- Verification: `testDebugUnitTest` 116 tests / 0 failures / 0 errors (1 opt-in skip); `assembleDebug` green.
 
 ## 0e. Goal Solver redesign: P1 sweep locus (user request, 2026-08-05)
 
@@ -197,7 +196,46 @@ x = age) — and of its web-research capability:
   `applyGoalSolverPlan(row)`. Agent tool `RUN_RETIREMENT_SOLVER` answers for the current P1 only
   (doc updated; the GUI table covers the whole locus).
 
-- Verification: `testDebugUnitTest` 122 tests / 0 failures / 0 errors (1 opt-in skip);
+- Cross-validation, fixed scenarios (user request): `GoalSolverCrossValidationTest` - 4 arbitrary
+  scenarios (S1 no-income 40/40/82 T0.30; S2 mid-career w/ expenses+inheritance+TFR 42/58/82
+  T0.25; S3 i=5% 35/50/90; S4 low-threshold 50/60/85), P1 ∈ {0, 0.3, 0.7, 1.0}: at C\* the engine
+  satisfies the goal, at C\*−2×tol the engine violates, at C\*+50k the utility history is
+  identical (maxDiff < 1e-9) with higher bequest; entire S2 locus (11 rows) re-validated.
+  C\* table in `.agent/README-goal-solver.md` (S1 flat 269,531 € ∀P1 — floor binds; S4
+  78,369 → 31,494 → 0 as P1 rises).
+
+- Random cross-validation (user request): `GoalSolverRandomCrossValidationTest` - seeded-random
+  input sets (SEED 20260901, 12 draws) -> sweep -> random P1 row applied -> engine time-history.
+  Whenever C\* > 0 the plan must hit a binding constraint: 4x UTILITY graze (min sample - T =
+  -5.55e-17, machine-exact), 1x DEBT graze (min year-end net worth 533 EUR within compounded
+  slack), 7x trivially feasible (C\* = 0, income covers). ENGINE FACTS discovered: utility can
+  NEVER fall below T (floor -> shortfall becomes debt, so the solver's utility check is a
+  mirror; real constraints = year-end debt + death bequest); violazioneLascito is death-only;
+  legacy guarded in-plan by the reserve-gated p3 draw (discounted legacy + PV of expenses).
+  Golden rules in `.agent/README-goal-solver.md`.
+
+- Locus chart (user request): `GoalSolverDialog` now renders the (P1, C\*) locus as a 2D Plotly
+  chart (same stack as the Pareto chart) with the user's CURRENT simulation position (own P1 +
+  actual initial capital) as a red marker. Pure model `logic/GoalLocusChartModel.kt`
+  (`GoalLocusChartModelBuilder`, red-first tests: feasible rows only + sorted + percent,
+  marker P1 coerced to \[0,1]); `LineTraceSpec.pointSize` added (default 4, marker 12);
+  dialog body scrollable; strings en/it/es (chart\_title/axis\_p1/axis\_capital/trace\_locus/
+  trace\_current). Chart hidden when no feasible row.
+
+- Chart layout fix (user review: "grafico schiacciato per la legenda"): compact layout via
+  `buildMultiLineJson(layoutOverrides, xTickAngle)` — legend INSIDE (h, top-right), margins
+  44/8/8/30, x fixed 0..100, tickangle 0, `staticPlot: true` (kills stuck hover tooltip +
+  gesture conflicts); Pareto default layout UNCHANGED, both locked by
+  `PlotlySpecBuilderLayoutTest` (`testOptions.unitTests.isReturnDefaultValues = true` added
+  to app/build.gradle.kts to unit-test Log-calling builders).
+
+- Chart v3 — NATIVE Compose (user review 3: WebView still clipped in dialog): the locus chart
+  is drawn natively now (`GoalLocusChart` composable, Canvas 200dp, Compose legend; x ticks
+  0/25/50/75/100%, y nice ticks, red marker) — no WebView in the dialog, no sizing race.
+  Geometry `logic/GoalLocusChartGeometry.yAxisTicks` unit-tested (TDD red-first). Plotly
+  stack kept for full-screen charts; PlotlyHtmlProvider sizing hardening kept.
+
+- Verification: `testDebugUnitTest` 135 tests / 0 failures / 0 errors (1 opt-in skip);
   `assembleDebug` green.
 
 ## 0f. Failed attempts & dead ends (do NOT repeat)

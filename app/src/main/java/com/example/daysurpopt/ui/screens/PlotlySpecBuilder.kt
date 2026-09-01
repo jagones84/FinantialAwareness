@@ -130,7 +130,9 @@ object PlotlySpecBuilder {
         xRange: Pair<Double, Double>?,
         yRange: Pair<Double, Double>?,
         fixedRange: Boolean,
-        meta: Map<String, Any>?
+        meta: Map<String, Any>?,
+        layoutOverrides: Map<String, Any> = emptyMap(),
+        xTickAngle: Int = -45
     ): String {
         val dataTraces = traces.map { spec ->
             mapOf(
@@ -140,7 +142,7 @@ object PlotlySpecBuilder {
                 "x" to spec.x,
                 "y" to spec.y,
                 "line" to mapOf("color" to spec.color, "width" to 2),
-                "marker" to mapOf("size" to 4, "color" to spec.pointColor)
+                "marker" to mapOf("size" to spec.pointSize, "color" to spec.pointColor)
             )
         }
 
@@ -155,7 +157,7 @@ object PlotlySpecBuilder {
             "nticks" to 20,
             "tickmode" to "auto",
             "showticklabels" to true,
-            "tickangle" to -45,
+            "tickangle" to xTickAngle,
             "automargin" to true,
             "ticks" to "outside",
             "fixedrange" to fixedRange
@@ -195,7 +197,7 @@ object PlotlySpecBuilder {
             "autosize" to true,
             "dragmode" to (if (fixedRange) false else "zoom"),
             "meta" to meta
-        )
+        ).plus(layoutOverrides)
 
         return gson.toJson(mapOf("data" to dataTraces, "layout" to layout))
     }
@@ -205,7 +207,8 @@ object PlotlySpecBuilder {
         val x: List<Double>,
         val y: List<Double>,
         val color: String,
-        val pointColor: String
+        val pointColor: String,
+        val pointSize: Int = 4
     )
 
     fun buildJson(
