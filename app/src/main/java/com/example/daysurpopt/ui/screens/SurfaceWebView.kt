@@ -27,7 +27,8 @@ import com.google.gson.reflect.TypeToken
 data class SurfaceGrid(
     val x: List<Double>,
     val y: List<Double>,
-    val z: List<List<Double?>>
+    val z: List<List<Double?>>,
+    val anchorColorScaleOnFeasible: Boolean = false
 )
 
 @SuppressLint("SetJavaScriptEnabled")

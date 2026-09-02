@@ -213,14 +213,32 @@ ENGINE FACTS discovered while building it (golden rules):
    the REAL feasibility constraints are year-end debt and the death bequest.
 2. **violazioneLascito is death-only**: `month == monthCount - 1` is the last month of the
    WHOLE plan (not of each year). `(capital - debt) < soldiDaConservare - 1.0`.
-3. **During the plan the legacy is guarded by the reserve-gated p3 draw**: only the excess
-   over `reserveAt(month)` (= legacy discounted to today + PV of future specific expenses)
-   is p3-spendable. The utility floor can still eat the reserve (survival beats bequest).
+3. **During the plan the legacy is guarded by the three-branch draw** (2026-09-02, REVISION 2):
+   pre-pension (from max(P4, P2)) the p3 quota applies to (netWorth - legacy); in retirement the
+   draw is a p3-SCALED sustainable annuity PMT(netWorth, yearsLeft, legacy) with the POST-DRAW
+   forecast brake (`forecastFinalWithMinimumSpend < legacy + 1 -> draw 0`). Contract: p3 = 0
+   -> NO capital draw (buildGoalWhatIfInputs relies on it — the ungated annuity broke 19 tests).
 4. Three binding modes at C\* (graze = the constrained quantity touches its boundary within
    the bisection slack compounded at the plan rate): UTILITY (floor binds, min sample == T),
    LEGACY (final net worth grazes legacy), DEBT (min year-end net worth grazes 0).
    With P1 = 100% the floor binds PRE-stop (saving the whole salary means living on capital
    while working) - correct engine behavior, seen in random draw R7.
+5. **Spend is capped at the utility-curve plateau start** (2026-09-02,
+   `computeMaxUtilityMonthlySpend`): voluntary spend cannot exceed the smallest curve x whose
+   y reaches the curve max — beyond it extra spending buys zero utility and only wastes capital
+   (`finalSpend = max(min(baseSpend, cap), minimumSpend)`; the threshold floor stays
+   unconditional). Consequence: **C\* values computed before 2026-09-02 are stale — they can
+   only decrease** (less waste -> less capital required). The fobj is graded: legacy violations
+   score `base - (1.0 + 2.5 x shortfallRatio)` (separation: every violator < 0 <= every feasible).
+6. **Landscape heatmap colors anchor on the feasible band** (2026-09-02, REVISION 3):
+   `SurfaceGrid.anchorColorScaleOnFeasible` makes the 2D heatmap/contour zmin/zmax start at the
+   lowest feasible cell (z >= 0); legacy violators (negative fobj) clamp to the bottom color
+   instead of stretching the color scale over the penalty range (which rendered the whole
+   feasible band as ONE color — the "gran quadratone piatto"). Delta grids and the 3D surface
+   keep the raw scale. A/B evidence (`JuneEngineLandscapeABTest`): the June engine (dc1e7a0) is
+   EQUALLY floor-pinned on today's real data (feasible avg spread ~0.013 vs current 0.042) —
+   the landscape's physical contrast is limited by the data (scheduled expenses + legacy vs
+   capital), not by the engine.
 
 ## Rollback
 

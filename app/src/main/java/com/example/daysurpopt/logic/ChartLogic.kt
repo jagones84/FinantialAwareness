@@ -101,9 +101,9 @@ object ChartLogic {
             }
         }
         
-        val normalGrid = SurfaceGrid(x = x, y = y, z = z)
+        val normalGrid = SurfaceGrid(x = x, y = y, z = z, anchorColorScaleOnFeasible = true)
         val deltaGrid = if (isComparing) SurfaceGrid(x = x, y = y, z = zDelta) else null
-        
+
         return Pair(normalGrid, deltaGrid)
     }
 
@@ -193,9 +193,9 @@ object ChartLogic {
                 }
             }
         }
-        val normalGrid = SurfaceGrid(x = x, y = y, z = z)
+        val normalGrid = SurfaceGrid(x = x, y = y, z = z, anchorColorScaleOnFeasible = true)
         val deltaGrid = if (isComparing) SurfaceGrid(x = x, y = y, z = zDelta) else null
-        
+
         return Pair(normalGrid, deltaGrid)
     }
 

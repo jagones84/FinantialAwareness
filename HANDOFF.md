@@ -235,8 +235,135 @@ x = age) — and of its web-research capability:
   Geometry `logic/GoalLocusChartGeometry.yAxisTicks` unit-tested (TDD red-first). Plotly
   stack kept for full-screen charts; PlotlyHtmlProvider sizing hardening kept.
 
-- Verification: `testDebugUnitTest` 135 tests / 0 failures / 0 errors (1 opt-in skip);
-  `assembleDebug` green.
+- Fobj > 1 regression fixed (user report: the fobj chart shows values above 1, stability function
+  ill-conditioned, "fixed long ago but reintroduced"): the stability formula itself is NOT the
+  culprit — `Avg/(Avg+Std)` is clamped \[0,1] and `fObjW ≤ avg` by construction since the
+  2026-07-30 rewrite (commit 2d49502). The real hole: the monthly utility assembly
+  `utilitaDaSpesa(...) + cumulativeUtilityOffset` adds the per-expense utility offset
+  (user-editable in Specific Expenses) AFTER the \[0,1] clamp -> samples > 1 -> avg > 1 ->
+  fObjW > 1 in the Charts heatmap. Reproduced red-first
+  (`SimulationLogicTest.utilityWithOffset_stays_bounded_and_fobj_never_exceeds_one`,
+  max sample 1.1585 with offset 0.9); fix = top-only clamp `.coerceAtMost(1.0)` at the
+  simulation source (negative samples keep the existing infeasible→0 semantics; solver
+  threshold-graze unaffected — clamp only touches the top). The pre-2d49502 formula
+  `(Avg + w·(Avg/Std))/(1+w)` with 100.0 fallback was genuinely explosive; that historical
+  fix is intact.
+
+- Verification: `testDebugUnitTest` 138 tests / 0 failures / 0 errors (1 opt-in skip);
+  main sources compile (test build).
+
+## 0g. Graded cost function + max-utility spend cap (user request, 2026-09-02)
+
+- **Problem**: the fobj landscape over P1-P4 was flat with cliffs ("piatta a scalino"). Not the
+  stability formula (clamped, bounded since 2d49502) but the SIGNALING: (a) floor-funded threshold
+  utility pinned most defensive plans to the same score (debt hid failure); (b) since 2d49502 any
+  legacy violation or negative finite sample zeroed the WHOLE objective -> flat plain at 0 with no
+  gradient; (c) spend above the utility-curve knee was never capped -> wasted capital fed cliff (b).
+  The ORIGINAL engine (dc1e7a0) was smooth because of a graded death-year utility penalty (-100),
+  a spend cap at max-utility spend, and no objective zeroing.
+
+- **Fix 1 — graded objective** (`calculateObjectivesFromYears`): binary zero-outs removed; formula
+  unchanged (`Avg*((1-w)+w*Stability)`); legacy violation now subtracts a graded penalty
+  `100.0/planYears` from BOTH fObjW and fObj0 (separation: penalty > 1 >= base for planYears < 100
+  -> violators always negative, with a continuous slope inside the violating region); finite
+  negative samples (disutility offsets) flow into the average; the ONLY zero-out left is the
+  math-error guard (non-finite samples or the -1e9 exception dummy, `UTILITY_SENTINEL_ABS = 1e6`).
+  Tests: graded penalty value + separation, gradient between violating plans, negative-flow, sentinel.
+
+- **Fix 2 — spend cap** (`computeMaxUtilityMonthlySpend` + monthly loop): voluntary spend capped at
+  the utility-curve plateau start (smallest curve-point x with y >= curve max, x DAYS\_PER\_MONTH;
+  default sigmoid -> `valoreSpesaGiornalieraMaxUtilita * DAYS_PER_MONTH` = old
+  `valoreSpesaMensileMaxUtilita`); `finalSpend = max(min(baseSpend, cap), minimumSpend)` — floor
+  UNCONDITIONAL (deliberate deviation from the old engine, keeps goal-solver semantics exact).
+  No waste above saturation -> capital preserved -> fewer violating plans; solver C\* can only DECREASE.
+  Tests: helper unit tests (default/curve-plateau/single-point) + engine cap-bind + floor-wins.
+  Plan flaw caught during execution: within-year utility is NOT constant (fdeg uses continuous age,
+  drift \~0.002/yr) — plateau assertion uses spread < 0.01.
+
+- **Verification**: `testDebugUnitTest` 147 tests / 0 failures / 1 opt-in skip; `assembleDebug`
+  green. All goal-solver cross-validation + characterization tests pass unchanged (dynamic C\*).
+
+- **REVISION 2 (user rejected revision 1: "sempre quadrata... un gran quadratone piatto")** —
+  evidence-driven correction with the real-data landscape diagnostic
+  (`UserRealDataCheckTest.user_real_data_fobj_landscape_diagnostic`, prints the P1xP2 grid with
+  floor%/sat%/avg/std/fobj per cell):
+
+  - Diagnosis 1: the feasible plateau was FLOOR-PINNING — the reserve-gated p3 draw quarantined
+    legacy + PV-of-expenses, leaving \~0 excess -> the draw was dead and P1 >= 0.4 produced
+    BYTE-IDENTICAL results (feasible spread 0.017 total).
+
+  - Fix: old three-branch spend rule restored — pre-pension p3 quota on (netWorth - legacy);
+    retirement = p3-SCALED sustainable annuity PMT(netWorth, yearsLeft, legacy) gated on p3 > 0
+    (the goal-solver contract "p3 = 0 -> no capital draw" MUST hold: ungated annuity broke 19
+    tests); forecast brake `forecastFinalWithMinimumSpend(month) < legacy + 1 -> draw 0`
+    (monthly port of the old forecastFinalWithMin). Reserve machinery removed.
+
+  - Diagnosis 2: a marginal legacy landing (49,206 vs 50,000) hit the FLAT penalty -> whole grid
+    at -2.3. Fix: SHORTFALL-PROPORTIONAL penalty `2.5 x (legacy - finalNetWorth)/legacy`
+    (DEATH\_LEGACY\_PENALTY = 2.5 = June magnitude for a 100% breach; 1 EUR-scale breaches now cost
+    \~0.04, not 2.5). Scale bug (100 vs 2.5) caught by the diagnostic itself (-64 cells).
+
+  - RESULT (real data, P1xP2 grid): spread 0.017 -> 1.61; P2 gradient 0.147 -> 0.189 (longer
+    saving -> richer annuity); P1 = 0 -> -1.42 (die \~18k in debt — honest deep negative);
+    current plan 0.1526. The landscape finally discriminates.
+
+- **Visible consequences**: study-table C\* values decrease vs pre-2026-09-02; fobj charts can show
+  NEGATIVE values for legacy-violating plans (the graded failure signal); applied plans spend less
+  above the saturation knee (higher final net worth). `tools/cross_model_regression.py` is STALE
+  (encodes the 2026-07-30 policy) — regenerate before trusting it.
+
+- **REVISION 3 (user: "sempre piatta... anche w=0 assurdo!!") — A/B June-vs-current + display fix**:
+
+  - Experiment: the June engine (dc1e7a0) was ported VERBATIM into a test fixture
+    (`JuneEngineLandscapeABTest`, annual loop + June objective `(Avg + w'·Avg/Std)/(1+w')`) and run
+    side by side with the current engine on the user's real data (P1xP2 grid, w in {user, 0, 1}).
+
+  - DECISIVE RESULT: June is EQUALLY FLAT on today's data (feasible avg spread \~0.013 vs current
+    0.042 — current varies MORE; June cap%=0 everywhere, avg \~= T=0.2 -> floor-pinned by the \~141k
+    scheduled expenses + 50k legacy vs 100k capital). The "come prima" difference is NOT the engine.
+
+  - ROOT CAUSE of the visual flatness: the heatmap maps colors linearly over the RAW fObjW min/max
+    (`PlotlySpecBuilder.getZMinMax`). With violators at -2.39 and feasible 0.204..0.246, the
+    feasible band spans \~1.6% of the color scale -> all feasible cells render as ONE color. In
+    June violators were exactly 0 -> scale \[0, 0.29] -> feasible band had full color resolution.
+
+  - FIX (display-only, optimizer untouched): `SurfaceGrid.anchorColorScaleOnFeasible` (true on the
+    normal landscape grids in ChartLogic, false on delta grids); `PlotlySpecBuilder`
+    `getFeasibleAnchoredRange` anchors the 2D color range (contour start/end, heatmap zmin/zmax)
+    on cells >= 0 -> violators clamp to the bottom color. 3D surface and delta grids keep the raw
+    scale. Contract tests: `PlotlySpecBuilderColorScaleTest` (6). Suite 157/0/1 skip,
+    `assembleDebug` green. Docs: README-goal-solver golden rules 3/5 refreshed + new rule 6.
+
+- **DATA AUDIT (user: "i dati li hai controllati sono sensati?") + engine-exoneration proof**:
+  new opt-in `UserRealDataCheckTest.user_real_data_sensibleness_audit` + synthetic
+  `SimulationLogicTest.richSurplusData_produces_nonFlat_p1Landscape`. FINDINGS (all numbers
+  cross-checked, no engine bug):
+
+  - Real data: surplus 1,258 EUR/mo working / 18 EUR/mo pension; minimum spend for T=0.2 is
+    853 (42yo) -> 1,745 (80yo); expenses 141.5k (40k\@50, 26k\@60, 46k\@70, 20k\@80); inheritance
+    169k\@57; TFR 100k\@65; legacy 50k; curve responsive band 700-2,000 EUR/mo; cap 3,044 EUR/mo.
+
+  - PLATEAU IS PHYSICS: floor bites when surplus x (1-P1) < minimum -> P1 > 1 - 853/1258 = 0.322.
+    Measured transition: P1=0.300 (spend 880 > 853, avg 0.2135) vs P1=0.325 (spend 849 < 853 ->
+    floor, avg 0.2134) -> byte-identical above. The current plan spends 29 of 41 years AT the
+    floor (u=0.200 exactly).
+
+  - CHASM AT THE BOUNDARY IS THE SEPARATION FLOOR (REVISION 2b, user-requested): fine sweep
+    P1=0/0.025/0.05/0.075 -> fobj0 -2.34/-1.84/-1.33/-0.83 (graded, finalNW 18.3k/28.5k/38.7k/
+    48.8k), then P1=0.100 -> +0.229 (feasible). A 1,161 EUR shortfall (2.3% of legacy) costs
+    1.06 because penalty = 1.0 (floor) + 2.5 x shortfallRatio and the floor MUST exceed the best
+    possible feasible score (\~0.25) or the optimizer would again pick marginal violators. The
+    graded transition exists; only the last step into feasibility is discontinuous BY DESIGN.
+
+  - ENGINE EXONERATED: with synthetic rich data (surplus 3,000 EUR/mo >> minimum \~450, capital
+    300k, no expenses) the P1 sweep is SMOOTH and RICH: fobj0 0.4657 -> 0.2136, spread 0.252,
+    monotonic over the whole range (test locks spread > 0.10). The engine produces rich
+    landscapes whenever the data allows; the user's flatness is the tightness of their own
+    numbers (surplus barely 1.47x the minimum consumption).
+
+  - Git archaeology: ChartLogic/ChartsViewModel/heatmap code has exactly 2 commits, both
+    2026-06-26 (dc1e7a0 initial + 776f773 pareto) -> the chart and its w-sourcing are UNCHANGED
+    since June; "rich June" cannot come from chart code. Suite 159/0/1 skip, assembleDebug green.
 
 ## 0f. Failed attempts & dead ends (do NOT repeat)
 
