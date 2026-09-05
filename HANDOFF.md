@@ -11,6 +11,21 @@ TDD pass applied the fixes — see section 0. Full unit suite (122 tests) and `a
 
 ***
 
+## 0h. License change (2026-09-05): MIT → AGPL-3.0-or-later
+
+- **User request:** prevent anyone from copying the app and republishing/selling it on the
+  Play Store.
+- `LICENSE` replaced with the official GNU AGPL-3.0 text (gnu.org `agpl-3.0.txt`, 34,523
+  bytes / 661 lines / LF, verified). Rollback: `git checkout -- LICENSE`.
+- All **100 `.kt` files** under `app/src` now start with the header
+  `// SPDX-License-Identifier: AGPL-3.0-or-later` + `// Copyright (c) 2026 jagones84`
+  (per-file BOM/EOL style preserved; verified programmatically — 100/100 carry the header).
+- `README.md` gained a License section stating the AGPL-3.0-or-later terms.
+- **Effect:** any redistribution (including publishing a derivative app on a store, with or
+  without modifications) must release the complete corresponding source under the same
+  license; network-service use also triggers the source obligation (AGPL §13).
+- Post-change verification: full unit suite + `assembleDebug` green (see Verification).
+
 ## 0. Fix status after the TDD application pass (2026-08-05)
 
 All fixes were applied **red-first** (failing test → implementation → green → full suite + build).
@@ -364,6 +379,30 @@ x = age) — and of its web-research capability:
   - Git archaeology: ChartLogic/ChartsViewModel/heatmap code has exactly 2 commits, both
     2026-06-26 (dc1e7a0 initial + 776f773 pareto) -> the chart and its w-sourcing are UNCHANGED
     since June; "rich June" cannot come from chart code. Suite 159/0/1 skip, assembleDebug green.
+
+- **THE ARCANUM (found by the USER, 2026-09-02): the flat "yellow square" was the THRESHOLD T.**
+  The user's `sogliaMinimaFunzioneUtilita` is 0.2 NOW; it was 0.1 in June. T sets the minimum
+  spend, and the minimum spend sets WHERE the utility floor bites: **P1\* = 1 - minSpend(T)/surplus**.
+  Measured degradation curve on real data (`ARCANUM CHECK` in
+  `user_real_data_fobj_landscape_diagnostic`, T sweep 0.2/0.16/0.12/0.1):
+
+  - T=0.2 -> minSpend(42)=853 EUR/mo -> P1\*=0.32 -> feasible 30/36 cells, feasible-avg spread
+    0.0236 (the yellow plateau) + 6 chasm cells at the border;
+
+  - T=0.16 -> 731 EUR/mo -> P1\*=0.42 -> 36/36 feasible, spread 0.0675 (already half-flat);
+
+  - T=0.12 -> 608 EUR/mo -> P1\*=0.52 -> spread 0.1038;
+
+  - T=0.1 -> 538 EUR/mo -> P1\*=0.57 -> feasible 36/36 (ZERO violators, NO chasm anywhere),
+    spread 0.1229 (5.2x richer) -> the June landscape reappears exactly.
+    WHY T flattens (worst feasible avg RISES toward the best as T grows: min 0.1087 -> 0.1658 ->
+    0.2039 while max stays \~0.23): (1) floor-years contribute EXACTLY T for every (P1,P2) — a
+    growing constant diluting the average (current plan at T=0.2: 29/41 years at floor);
+    (2) the responsive spend band \[minSpend(T), surplus] narrows (721 -> 527 -> 405 EUR/mo) and
+    the utility curve saturates at the top; (3) the byte-identical plateau boundary P1\* falls
+    with T. No w can recover the contrast: fObj is a monotone reshape of the same compressed avg.
+    NO CODE CHANGE was needed: the engine was exonerated; T is a user setting. RULE FOR FUTURE
+    SESSIONS: when the fobj heatmap "goes flat", check `sogliaMinimaFunzioneUtilita` FIRST.
 
 ## 0f. Failed attempts & dead ends (do NOT repeat)
 

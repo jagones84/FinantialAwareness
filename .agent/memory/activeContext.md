@@ -204,6 +204,19 @@ All audit fixes from HANDOFF.md applied step-by-step with TDD (red-first), sessi
     rich on synthetic data (spread 0.252, smooth); heatmap code unchanged since June (2 commits
     2026-06-26). Suite 159/0/1 skip, assembleDebug green.
 
+31. **THE ARCANUM (found by the USER): the flat landscape was the THRESHOLD T.** June used
+    sogliaMinimaFunzioneUtilita=0.1, now 0.2. T sets minSpend -> floor-bite boundary
+    P1* = 1 - minSpend(T)/surplus. ARCANUM CHECK on real data: T=0.2 -> 30/36 feasible,
+    spread 0.0236 (yellow plateau) + 6 chasm cells; T=0.1 -> 36/36 feasible (no chasm),
+    spread 0.1229 (5.2x) = June landscape back. NO code change needed; engine was exonerated.
+    At T=0.1/w=1 the heatmap is smooth single-peaked (~0.19 @ P1~0.15/P2~52; current 0.16).
+    Manual: README-goal-solver rule 7, HANDOFF 0g ARCANUM.
+
+32. **LICENSE change: MIT → AGPL-3.0-or-later** (user request: block copy-and-resell on
+    Play Store). LICENSE = official gnu.org text (34,523 bytes, verified); SPDX+copyright
+    header added to all 100 .kt files under app/src (BOM/EOL preserved, verified 100/100);
+    README License section added; HANDOFF 0h. Post-change: full suite + build green.
+
 ## Verification
 
 - testDebugUnitTest: 159 tests / 0 failures / 0 errors (1 opt-in skip).

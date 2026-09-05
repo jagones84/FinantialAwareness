@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2026 jagones84
+
 package com.example.daysurpopt.logic
 
 import com.example.daysurpopt.domain.FinancialInput
@@ -183,6 +186,51 @@ class UserRealDataCheckTest {
         val nearMax = fobjs.count { it >= zMax - 0.02 }
         println("=== SUMMARY: fobj range [$zMin .. $zMax], spread=${"%.4f".format(zMax - zMin)}, " +
             "cells within 0.02 of max: $nearMax/${fobjs.size} ===")
+
+        println("=== ARCANUM CHECK: threshold T sets the floor-bite boundary P1* = 1 - minSpend(T)/surplus ===")
+        val surplusMonthly = surplus.calculateSurplusGiornalieroLavorativa(true) * 365.25 / 12.0
+        for (tProbe in listOf(0.2, 0.16, 0.12, 0.1)) {
+            val probeInputs = inputs.copy(sogliaMinimaFunzioneUtilita = tProbe)
+            val feasibleAvg = mutableListOf<Double>()
+            var violCells = 0
+            for (p2 in p2Values) {
+                for (p1 in p1Values) {
+                    val cell = probeInputs.copy(
+                        p1SavingRatioSurplus = p1,
+                        p2EtaFineRisparmioNoCapitale = p2
+                    )
+                    val years = calculateSimulation(cell, expenses, surplus)
+                    val obj = calculateObjectivesFromYears(years, bonusStdWeight = w, legacyTarget = cell.soldiDaConservare)
+                    if (years.any { it.violazioneLascito }) {
+                        violCells++
+                    } else {
+                        feasibleAvg.add(obj.fObj0)
+                    }
+                }
+            }
+            val fdeg42 = funzioneDegradoPerEta(42.0, inputs).coerceAtLeast(1e-9)
+            val requiredRaw = (tProbe / fdeg42).coerceIn(0.0, 1.0)
+            val curve = inputs.utilityCurvePoints
+                ?.filter { it.x.isFinite() && it.y.isFinite() }?.sortedBy { it.x }
+            var minSpend42 = 0.0
+            if (curve != null && curve.size >= 2) {
+                for (i in 0 until curve.lastIndex) {
+                    val a = curve[i]
+                    val b = curve[i + 1]
+                    if (requiredRaw >= minOf(a.y, b.y) && requiredRaw <= maxOf(a.y, b.y)) {
+                        val daily = if (b.y == a.y) a.x else a.x + (requiredRaw - a.y) / (b.y - a.y) * (b.x - a.x)
+                        minSpend42 = daily * 365.25 / 12.0
+                        break
+                    }
+                }
+            }
+            println(
+                "T=$tProbe -> minSpend42=${"%.0f".format(minSpend42)} EUR/mo, P1*=${"%.2f".format(1.0 - minSpend42 / surplusMonthly)}, " +
+                    "feasible cells ${feasibleAvg.size}/${p2Values.size * p1Values.size}, viol=$violCells, " +
+                    "feasible-avg range [${"%.4f".format(feasibleAvg.min())} .. ${"%.4f".format(feasibleAvg.max())}], " +
+                    "spread=${"%.4f".format(feasibleAvg.max() - feasibleAvg.min())}"
+            )
+        }
     }
 
     @Test

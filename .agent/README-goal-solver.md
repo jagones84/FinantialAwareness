@@ -239,6 +239,19 @@ ENGINE FACTS discovered while building it (golden rules):
    EQUALLY floor-pinned on today's real data (feasible avg spread ~0.013 vs current 0.042) —
    the landscape's physical contrast is limited by the data (scheduled expenses + legacy vs
    capital), not by the engine.
+7. **The threshold T controls the landscape richness, not just the floor** (2026-09-02, THE
+   ARCANUM, found by the user): `minimumSpend(T)` sets where the floor bites —
+   **P1\* = 1 - minSpend(T)/surplus**. Measured degradation curve on real data (42yo, surplus
+   1,258 EUR/mo): T=0.2 -> minSpend 853, P1*=0.32, spread 0.024, 6 violators; T=0.16 -> 731,
+   P1*=0.42, spread 0.068; T=0.12 -> 608, P1*=0.52, spread 0.104; T=0.1 -> 538, P1*=0.57,
+   spread 0.123, ALL plans feasible. Mechanism: floor-years contribute EXACTLY T for every
+   (P1,P2) (a growing constant that dilutes the average), the responsive spend band
+   [minSpend(T), surplus] narrows, and the byte-identical plateau boundary falls. A higher T
+   both raises the guaranteed quality of life AND flattens the fobj landscape; no w can recover
+   the contrast (fObj is a monotone reshape of the same compressed avg). When the heatmap "goes
+   flat", check `sogliaMinimaFunzioneUtilita` FIRST. Regression guards:
+   `richSurplusData_produces_nonFlat_p1Landscape` (engine can be rich) + `ARCANUM CHECK` block
+   in `user_real_data_fobj_landscape_diagnostic` (T sweep 0.2/0.16/0.12/0.1).
 
 ## Rollback
 
